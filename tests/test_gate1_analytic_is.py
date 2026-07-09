@@ -42,8 +42,13 @@ def _logw_scale(rng, n, d, eps):
     return 0.5 * d * np.log(s2) - 0.5 * (1.0 - 1.0 / s2) * (x**2).sum(axis=1)
 
 
-SHIFT_CASES = [(2, 0.3), (8, 0.1), (8, 0.3), (32, 0.15), (16, 0.5)]
-SCALE_CASES = [(8, 0.3), (8, -0.3), (32, 0.2)]
+# Strict-match cases are restricted to where the ESS estimator itself is
+# reliable: its relative sd is sqrt((E w^4/(E w^2)^2 - 1)/N) per the 4th-moment
+# of the weights. For mean shift that factor is exp(4 d eps^2); for variance
+# scaling s^2=1+eps the per-dim 4th moment s^3/sqrt(4-3/s^2) DIVERGES for
+# s^2 <= 3/4. All cases below keep estimator noise < 1% at N=3e5.
+SHIFT_CASES = [(2, 0.3), (8, 0.1), (8, 0.3), (32, 0.15)]
+SCALE_CASES = [(8, 0.3), (8, -0.15), (32, 0.1)]
 
 
 @pytest.mark.parametrize("d,eps", SHIFT_CASES)
@@ -67,6 +72,22 @@ def test_ess_matches_closed_form_cov_scaling(d, eps):
     est = ess_frac_from_logw(logw)
     assert est == pytest.approx(target, rel=0.08)
     assert gaussian_scale_ess_frac(eps, d) == pytest.approx(target, rel=1e-12)
+
+
+def test_deep_tail_regime_ess_is_order_of_magnitude_only():
+    """At (d=16, eps=0.5) the closed form gives ESS/N = e^-4 ~ 1.8%, but the
+    ESS ESTIMATOR's relative sd at N=3e5 is sqrt((e^16-1)/3e5) ~ 5.4 (540%):
+    the empirical ESS in the near-vacuous regime is order-of-magnitude only
+    (typically an OVERestimate, since the rare dominating weights are missed).
+    This is a known caveat that M1 must respect when choosing N per grid
+    point; here we only pin the order of magnitude.
+    """
+    n = 300_000
+    rng = np.random.default_rng(4000)
+    logw = _logw_shift(rng, n, 16, 0.5)
+    est = ess_frac_from_logw(logw)
+    cf = np.exp(-16 * 0.25)
+    assert cf / 10.0 < est < cf * 10.0
 
 
 @pytest.mark.parametrize("kind,d,eps", [("shift", 8, 0.3), ("scale", 8, 0.3), ("shift", 32, 0.15)])

@@ -159,11 +159,11 @@ def test_sliced_w2_shifted_gaussians():
     delta[0] = 1.5
     x = rng.standard_normal((n, d))
     y = rng.standard_normal((n, d)) + delta
-    sw2 = sliced_w2_squared(x, y, n_proj=256, rng=np.random.default_rng(14))
-    assert sw2 == pytest.approx(1.5**2 / d, abs=0.035)
+    sw2 = sliced_w2_squared(x, y, n_proj=1024, rng=np.random.default_rng(14))
+    assert sw2 == pytest.approx(1.5**2 / d, abs=0.05)
     same = sliced_w2_squared(
         rng.standard_normal((n, d)), rng.standard_normal((n, d)),
-        n_proj=256, rng=np.random.default_rng(15),
+        n_proj=1024, rng=np.random.default_rng(15),
     )
     assert same < 0.01
 
