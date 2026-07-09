@@ -19,17 +19,17 @@ from jax_flows import TimeConditionedMLP, cfm_loss, cfm_sample
 from ics.zoo import sample_target, sample_x
 from stage0.sliced_w2 import sliced_w2_squared
 
-N_STEPS = 1200
+N_STEPS = 2500
 BATCH = 512
 
 
 def test_fm_single_target_overfit_gate():
-    target = sample_target(jr.key(42), "gmm", 2)
+    target = sample_target(jr.key(42), "gmm", 2)  # 3 comps, well separated
     x_train = sample_x(jr.key(43), target, 8192).astype(jnp.float32)
 
-    model = TimeConditionedMLP(hidden_dims=(128, 128), output_dim=2)
+    model = TimeConditionedMLP(hidden_dims=(256, 256), output_dim=2)
     params = model.init(jr.key(44), jnp.ones((1, 2), jnp.float32), jnp.ones((1,), jnp.float32))["params"]
-    tx = optax.adam(1e-3)
+    tx = optax.adam(optax.cosine_decay_schedule(2e-3, N_STEPS))
     opt_state = tx.init(params)
 
     @jax.jit
