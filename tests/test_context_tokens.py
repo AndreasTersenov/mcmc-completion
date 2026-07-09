@@ -75,6 +75,40 @@ def test_whitening_roundtrip_and_grad_feature():
     )
 
 
+def test_jitted_mala_target_gaussian_moments():
+    # the zoo-scale MALA twin (target-as-pytree, stage-0 algorithm in jax)
+    # must sample a known Gaussian correctly given enough steps
+    from ics.context import _mala_target
+    from ics.zoo import GMMTarget
+    import numpy as np
+
+    mean = jnp.array([1.0, -2.0])
+    t = GMMTarget(
+        means=jnp.zeros((8, 2)).at[0].set(mean),
+        chols=jnp.tile(jnp.eye(2)[None], (8, 1, 1)),
+        log_weights=jnp.full(8, -jnp.inf).at[0].set(0.0),
+        k_mask=jnp.arange(8) < 1,
+    )
+    xs, acc = _mala_target(t, jr.key(0), 4000, 0.5, 1.0)
+    keep = np.asarray(xs).reshape(4, 4000, 2)[:, 1000:, :].reshape(-1, 2)
+    assert 0.3 < float(acc) < 0.98
+    np.testing.assert_allclose(keep.mean(axis=0), [1.0, -2.0], atol=0.1)
+    np.testing.assert_allclose(keep.std(axis=0), [1.0, 1.0], atol=0.1)
+
+
+def test_generate_context_for_target_matches_protocol():
+    from ics.context import generate_context_for_target
+    from ics.zoo import sample_target
+
+    t = sample_target(jr.key(20), "gmm", 4)
+    c = generate_context_for_target(jr.key(21), t, K=64)
+    assert c.tokens.shape == (64, TOKEN_DIM)
+    e_tok = np.asarray(c.tokens[:, 4:DMAX])
+    assert np.abs(e_tok).max() == 0.0  # padding zeroed
+    c2 = generate_context_for_target(jr.key(21), t, K=64)
+    np.testing.assert_array_equal(np.asarray(c.tokens), np.asarray(c2.tokens))
+
+
 def test_chain_structure_is_4_chains():
     # K tokens = 4 chains x K/4 steps; chains from overdispersed inits differ
     t = sample_target(jr.key(8), "dwell", 2)

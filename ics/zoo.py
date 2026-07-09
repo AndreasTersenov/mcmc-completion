@@ -41,7 +41,6 @@ class GMMTarget(NamedTuple):
     chols: jnp.ndarray        # (KMAX, d, d) lower cholesky, inactive = I
     log_weights: jnp.ndarray  # (KMAX,), -inf at inactive comps
     k_mask: jnp.ndarray       # (KMAX,) bool
-    family: str = "gmm"
 
     @property
     def d(self):
@@ -54,7 +53,6 @@ class DwellTarget(NamedTuple):
     b: jnp.ndarray        # (nw,)
     log_z1d: jnp.ndarray  # (nw,) 1-d normalizers of exp(-a (z^2-b)^2)
     cdf: jnp.ndarray      # (nw, G) inverse-CDF tables on _DW_GRID
-    family: str = "dwell"
 
     @property
     def d(self):
@@ -69,7 +67,6 @@ class FunnelTarget(NamedTuple):
     Q: jnp.ndarray  # (d, d) rotation; v-axis = Q[:, 0]
     sigma_v: jnp.ndarray  # scalar
     c: jnp.ndarray        # scalar
-    family: str = "funnel"
 
     @property
     def d(self):
@@ -78,7 +75,6 @@ class FunnelTarget(NamedTuple):
 
 class WarpTarget(NamedTuple):
     warp: SinhArcsinhWarp
-    family: str = "warp"
 
     @property
     def d(self):
@@ -87,7 +83,6 @@ class WarpTarget(NamedTuple):
 
 class BananaTarget(NamedTuple):
     warp: BananaWarp
-    family: str = "banana"
 
     @property
     def d(self):
@@ -100,7 +95,6 @@ class FunnelMixTarget(NamedTuple):
     cs: jnp.ndarray        # (J,)
     shifts: jnp.ndarray    # (J, d)
     log_weights: jnp.ndarray  # (J,)
-    family: str = "funnelmix"
 
     @property
     def d(self):
@@ -302,3 +296,11 @@ def mode_centers(target) -> Optional[np.ndarray]:
         vpk = np.clip(vpk, -2.0 * sv, 0.0)  # cluster label, not a sharp peak
         return np.asarray(target.shifts) + vpk[:, None] * np.asarray(target.Qs)[:, :, 0]
     return None
+
+
+def family_of(target):
+    """Family name for a target instance (string field would break jit)."""
+    return {
+        GMMTarget: "gmm", DwellTarget: "dwell", FunnelTarget: "funnel",
+        WarpTarget: "warp", BananaTarget: "banana", FunnelMixTarget: "funnelmix",
+    }[type(target)]

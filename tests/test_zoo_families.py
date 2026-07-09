@@ -24,6 +24,7 @@ import jax.random as jr
 import numpy as np
 import pytest
 
+from conftest import dseed
 from ics.warps import warp_inverse
 from ics.zoo import (
     _DW_GRID,
@@ -42,7 +43,7 @@ ALL_FAMILIES = FAMILIES_TRAIN + FAMILIES_HELDOUT
 
 @pytest.mark.parametrize("family", ALL_FAMILIES)
 def test_grid_normalization_d2(family):
-    t = sample_target(jr.key(hash(("norm", family)) % 2**31), family, 2)
+    t = sample_target(jr.key(dseed("norm", family)), family, 2)
     x = np.asarray(sample_x(jr.key(1), t, 20_000), dtype=np.float64)
     lo = x.min(axis=0) - 4.0
     hi = x.max(axis=0) + 4.0
@@ -68,7 +69,7 @@ KDE_IDENTITY_FAMILIES = ("gmm", "warp", "banana")
 def test_sampler_density_consistency_d2(family):
     """E_p[r/p] = 1, r = mixture of Gaussians at independent sample centers."""
     n, m_centers, h = 200_000, 64, 0.5
-    key = jr.key(hash((family, 2)) % 2**31)
+    key = jr.key(dseed("cons", family, 2))
     k1, k_eval, k_ctr = jr.split(key, 3)
     t = sample_target(k1, family, 2)
     x = np.asarray(sample_x(k_eval, t, n), dtype=np.float64)
@@ -113,7 +114,7 @@ def test_gmm_closed_form_moments(d):
 def test_warp_base_recovery(family, d):
     """z = f^-1(samples) must be exactly N(0, I): sampler and density share f,
     and f's inverse/logdet are pinned by the Jacobian tests."""
-    t = sample_target(jr.key(hash((family, d, "base")) % 2**31), family, d)
+    t = sample_target(jr.key(dseed("base", family, d)), family, d)
     x = sample_x(jr.key(3), t, 300_000)
     z = np.asarray(warp_inverse(t.warp, x), dtype=np.float64)
     np.testing.assert_allclose(z.mean(0), np.zeros(d), atol=0.02)

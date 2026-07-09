@@ -20,6 +20,7 @@ import jax.random as jr
 import numpy as np
 import pytest
 
+from conftest import dseed
 from ics.warps import make_warp, warp_forward, warp_inverse, warp_logdet
 
 KINDS = ["sinharcsinh", "banana"]
@@ -28,7 +29,7 @@ KINDS = ["sinharcsinh", "banana"]
 @pytest.mark.parametrize("kind", KINDS)
 @pytest.mark.parametrize("d", [2, 4, 8])
 def test_roundtrip(kind, d):
-    w = make_warp(jr.key(hash((kind, d)) % 2**31), d, kind)
+    w = make_warp(jr.key(dseed("warp", kind, d)), d, kind)
     z = jr.normal(jr.key(1), (128, d), dtype=jnp.float64)
     x = warp_forward(w, z)
     z_back = warp_inverse(w, x)
@@ -40,7 +41,7 @@ def test_roundtrip(kind, d):
 @pytest.mark.parametrize("kind", KINDS)
 @pytest.mark.parametrize("d", [2, 4, 8])
 def test_logdet_matches_numeric_jacobian(kind, d):
-    w = make_warp(jr.key(100 + hash((kind, d)) % 2**31), d, kind)
+    w = make_warp(jr.key(dseed("warpj", kind, d)), d, kind)
     z = jr.normal(jr.key(2), (16, d), dtype=jnp.float64) * 1.5
 
     def fwd_single(zi):

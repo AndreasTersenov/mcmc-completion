@@ -14,6 +14,7 @@ Token layout (TOKEN_DIM = 2*DMAX + 4):
     sigma*gradE / sd (DMAX, zero-padded) | log sd(E) | log sd(grad) | d/DMAX ]
 """
 
+from functools import partial
 from typing import NamedTuple
 
 import blackjax
@@ -21,7 +22,7 @@ import jax
 import jax.numpy as jnp
 import jax.random as jr
 
-from .zoo import DMAX
+from .zoo import DMAX, logpdf
 
 TOKEN_DIM = 2 * DMAX + 4
 N_CHAINS = 4
@@ -67,6 +68,57 @@ def _run_mala(key, ld_single, d, n_steps, step, temperature):
     return x, acc.mean()
 
 
+@partial(jax.jit, static_argnames=("n_steps",))
+def _mala_target(target, key, n_steps, step, temperature):
+    """Own MALA (stage-0 algorithm, jax twin) with the TARGET AS A PYTREE
+    ARGUMENT: compiles once per (family type, d, n_steps) instead of once per
+    target — mandatory for zoo-scale context generation."""
+    d = target.d
+    ld = lambda xi: logpdf(target, xi[None, :])[0] / temperature
+    grad_ld = jax.grad(ld)
+    k_init, k_run = jr.split(key)
+    x = INIT_SCALE * jr.normal(k_init, (N_CHAINS, d))
+    lp = jax.vmap(ld)(x)
+    g = jax.vmap(grad_ld)(x)
+
+    def one_step(carry, k):
+        x, lp, g = carry
+        kn, ku = jr.split(k)
+        noise = jr.normal(kn, x.shape)
+        prop = x + step * g + jnp.sqrt(2.0 * step) * noise
+        lp_p = jax.vmap(ld)(prop)
+        g_p = jax.vmap(grad_ld)(prop)
+        fwd = -((prop - x - step * g) ** 2).sum(-1) / (4.0 * step)
+        bwd = -((x - prop - step * g_p) ** 2).sum(-1) / (4.0 * step)
+        log_alpha = lp_p - lp + bwd - fwd
+        acc = jnp.log(jr.uniform(ku, (N_CHAINS,))) < log_alpha
+        x = jnp.where(acc[:, None], prop, x)
+        lp = jnp.where(acc, lp_p, lp)
+        g = jnp.where(acc[:, None], g_p, g)
+        return (x, lp, g), (x, acc)
+
+    _, (pos, accs) = jax.lax.scan(one_step, (x, lp, g), jr.split(k_run, n_steps))
+    xs = pos.transpose(1, 0, 2).reshape(N_CHAINS * n_steps, d)
+    return xs, accs.mean()
+
+
+def generate_context_for_target(key, target, K, temperature=1.0):
+    """Zoo-scale context generation: jit-cached per (family, d, K)."""
+    assert K % N_CHAINS == 0
+    k_probe, k_run = jr.split(key)
+    step = STEP_CANDIDATES[-1]
+    for cand in STEP_CANDIDATES:
+        _, acc = _mala_target(target, k_probe, 8, cand, temperature)
+        if float(acc) > 0.25:
+            step = cand
+            break
+    x_raw, accept = _mala_target(target, k_run, K // N_CHAINS, step, temperature)
+    energy = -logpdf(target, x_raw)
+    ld_single = lambda xi: logpdf(target, xi[None, :])[0]
+    grad_e = -jax.vmap(jax.grad(ld_single))(x_raw)
+    return _build_context(x_raw, energy, grad_e, accept, step, target.d)
+
+
 def generate_context(key, logpdf_fn, d, K, n_chains=N_CHAINS, temperature=1.0):
     assert n_chains == N_CHAINS, "frozen protocol: 4 chains"
     assert K % N_CHAINS == 0
@@ -86,7 +138,10 @@ def generate_context(key, logpdf_fn, d, K, n_chains=N_CHAINS, temperature=1.0):
 
     energy = -logpdf_fn(x_raw)
     grad_e = -jax.vmap(jax.grad(ld_single))(x_raw)
+    return _build_context(x_raw, energy, grad_e, accept, step, d)
 
+
+def _build_context(x_raw, energy, grad_e, accept, step, d):
     mu = x_raw.mean(axis=0)
     sigma = x_raw.std(axis=0) + 1e-6
     x_white = whiten_apply(x_raw, mu, sigma)
