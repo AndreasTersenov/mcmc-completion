@@ -25,3 +25,38 @@ first, always. Wider context (only if needed):
   jax or numpy — no torch needed for stage-0.
 - Log format: `log/YYYY-MM-DD-<slug>.md`, entries = hypothesis → setup → expectation →
   result → updated belief. Commit early and often; this repo is local-only (no remote yet).
+
+## Git discipline (decided 2026-07-09)
+
+- **Commit after every meaningful unit**: a validated estimator, a completed measurement
+  grid, a log entry, a RESULTS.md section. WIP commits are fine; uncommitted work at
+  session end is not.
+- **Push after committing** if a remote is configured (`git remote -v`) — currently
+  local-only; Andreas is setting up SSH auth + private GitHub remotes. Never force-push;
+  never rewrite pushed history.
+- Worktrees: NOT used in stage-0 (one sequential agent per repo). They become the tool in
+  the toy phase for parallel variant exploration (note: local-only repos need
+  `worktree.baseRef: "head"` since there is no origin/HEAD yet).
+
+## Backpressure (non-negotiable)
+
+- **Tests-first**: before implementing any estimator, write its validation test in
+  `tests/`. A Stop hook (`.claude/settings.json`) runs pytest and blocks session
+  completion while tests fail — this is deliberate; fix or xfail-with-justification.
+- A number plotted or written into RESULTS.md whose validation test is not green does
+  not exist.
+- Validation gates for THIS repo:
+  1. Analytic IS: ESS and log-Z for Gaussian proposal vs shifted/scaled Gaussian target match the closed form.
+  2. SNIS log-Z estimator unbiased within Monte-Carlo error on a known-Z mixture.
+  3. SMC/grid posterior matches the conjugate closed form on a linear-Gaussian family.
+  4. Every reported number passes an N-doubling stability check (double N, move < tol).
+
+## Compact instructions
+
+When compacting, preserve: modified file paths, test commands and their latest status,
+the measurement/grid currently running, SLURM job IDs, and any deviation-from-PLAN notes.
+
+## Long jobs
+
+Prefer Bash run_in_background or the Monitor tool to babysit SLURM jobs within a session;
+/loop for periodic in-session polling. Consult the rorqual-jobs skill before submitting.
