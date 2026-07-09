@@ -87,9 +87,12 @@ class Funnel:
         x = np.atleast_2d(x)
         v, y = x[:, 0], x[:, 1:]
         k = self.d - 1
-        var_y = self.c**2 * np.exp(v)
-        lp_v = -0.5 * v**2 / self.sigma_v**2 - 0.5 * np.log(2 * np.pi * self.sigma_v**2)
-        lp_y = -0.5 * (y**2).sum(axis=1) / var_y - 0.5 * k * (np.log(2 * np.pi) + np.log(var_y))
+        # exp may overflow to inf at absurd v (e.g. rejected MALA proposals):
+        # logpdf then correctly -> -inf, so silence the warning only.
+        with np.errstate(over="ignore"):
+            var_y = self.c**2 * np.exp(v)
+            lp_v = -0.5 * v**2 / self.sigma_v**2 - 0.5 * np.log(2 * np.pi * self.sigma_v**2)
+            lp_y = -0.5 * (y**2).sum(axis=1) / var_y - 0.5 * k * (np.log(2 * np.pi) + np.log(var_y))
         return lp_v + lp_y
 
     logpdf_u = logpdf
@@ -98,10 +101,11 @@ class Funnel:
         x = np.atleast_2d(x)
         v, y = x[:, 0], x[:, 1:]
         k = self.d - 1
-        var_y = self.c**2 * np.exp(v)
-        g = np.empty_like(x)
-        g[:, 0] = -v / self.sigma_v**2 + 0.5 * (y**2).sum(axis=1) / var_y - 0.5 * k
-        g[:, 1:] = -y / var_y[:, None]
+        with np.errstate(over="ignore"):
+            var_y = self.c**2 * np.exp(v)
+            g = np.empty_like(x)
+            g[:, 0] = -v / self.sigma_v**2 + 0.5 * (y**2).sum(axis=1) / var_y - 0.5 * k
+            g[:, 1:] = -y / var_y[:, None]
         return g
 
     def sample(self, rng, n):
