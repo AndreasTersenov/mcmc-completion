@@ -48,7 +48,7 @@ def panel_contraction(ax, families, title):
     for fam in families:
         c = CAT[fam]
         for grads, ls in [(True, "-"), (False, "--")]:
-            sub = con[(con.family == fam) & (con.T == 1) & (con.grads == grads)]
+            sub = con[(con.family == fam) & (con["T"] == 1) & (con.grads == grads)]
             med, lo, hi = med_iqr(sub)
             ax.plot(med.index, med.values, ls, color=c, lw=1.8,
                     marker="o", ms=5.5, markeredgecolor=SURFACE,
@@ -70,11 +70,13 @@ def main():
     panel_contraction(ax, ["gmm2", "funnel2", "dwell2"],
                       "In-family identification, θ-dim 2 (grid)\n"
                       "solid = with ∇E, dashed = E only; band = IQR over 6 reps")
-    for fam, lab in [("gmm2", "GMM"), ("funnel2", "funnel"), ("dwell2", "double-well")]:
-        sub = con[(con.family == fam) & (con.T == 1) & con.grads]
-        med = sub.groupby("K")["contract_ratio"].median()
-        ax.annotate(lab, (KS[-1] * 1.15, med.iloc[-1]), color=CAT[fam],
-                    fontsize=9, va="center", annotation_clip=False)
+    from matplotlib.lines import Line2D
+    handles = [Line2D([], [], color=CAT[f], lw=1.8, label=lab)
+               for f, lab in [("gmm2", "GMM"), ("funnel2", "funnel"),
+                              ("dwell2", "double-well")]]
+    ax.legend(handles=handles, loc="lower left", fontsize=8.5)
+    ax.annotate("funnel σᵥ: weakly identified\nuntil K=512 (both arms)",
+                (40, 0.26), color=CAT["funnel2"], fontsize=8.5, va="top")
 
     ax = axes[1]
     panel_contraction(ax, ["gmm8"],
@@ -89,11 +91,18 @@ def main():
         c = CAT[fam]
         sub = sw2[sw2.family == fam]
         med, lo, hi = med_iqr(sub, "sw2")
-        ax.plot(med.index, med.values, "-", color=c, lw=1.8, marker="o",
-                ms=5.5, markeredgecolor=SURFACE, markeredgewidth=0.8, label=lab)
+        # funnel2 rows fail the N-doubling gate (heavy tails): draw hollow/dashed,
+        # qualitative only
+        style = dict(ls="--", marker="o", markerfacecolor=SURFACE) if fam == "funnel2" \
+            else dict(ls="-", marker="o")
+        ax.plot(med.index, med.values, color=c, lw=1.8, ms=5.5,
+                markeredgecolor=c if fam == "funnel2" else SURFACE,
+                markeredgewidth=0.8, label=lab, **style)
         ax.fill_between(med.index, lo.values, hi.values, color=c, alpha=0.12, lw=0)
         base = sub.groupby("K")["sw2_baseline"].median()
         ax.plot(base.index, base.values, ":", color=c, lw=1.2)
+    ax.annotate("funnel: fails N-doubling gate\n(heavy tails) — qualitative only",
+                (8.6, 90), color=CAT["funnel2"], fontsize=8.5)
     ax.set_xscale("log", base=2)
     ax.set_yscale("log")
     ax.set_xticks(KS, [str(k) for k in KS])
