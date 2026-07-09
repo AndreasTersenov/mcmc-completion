@@ -60,3 +60,20 @@ the measurement/grid currently running, SLURM job IDs, and any deviation-from-PL
 
 Prefer Bash run_in_background or the Monitor tool to babysit SLURM jobs within a session;
 /loop for periodic in-session polling. Consult the rorqual-jobs skill before submitting.
+
+## Stack (decided 2026-07-09 — binds from toy phase; stage-0 numpy code stands as-is)
+
+JAX-first: **blackjax** (chains/SMC + the reference MCLMC implementation — the P7
+benchmark ships in our dependency), **distrax** (exact-sampleable zoo families),
+**flax or equinox + optax** (transformer + FM sampler head), **numpyro +
+inference-gym** (realistic Bayesian targets & community benchmark suite), Andreas's
+**jax_flows** (flow-matching core). Rule: call torch-only baselines (e.g. iDEM) through
+numpy boundaries; never port them.
+
+## Login-node rule (post-stage-0)
+
+Login node = tests and short validation runs only. Anything beyond ~1 core-minute
+(grids, bootstraps, sweeps, training) goes through SLURM — sbatch for batch, salloc for
+interactive iteration, account rrg-lplevass; consult the rorqual-jobs skill first.
+Note: remotes are live on GitHub (private) — push after every commit; earlier
+"local-only" notes above are outdated.
