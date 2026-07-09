@@ -74,9 +74,17 @@ def gen_context(fam, theta_star, K, T, rng):
 
 
 def make_loglik(fam, pts, E, G, use_grads):
+    # RELATIVE readout precision: 5% of the context's own energy/gradient
+    # spread (+ floor for degenerate contexts). An absolute sigma is broken
+    # for heavy-scale families (funnel neck energies are O(10^2-10^3): the
+    # likelihood becomes a spike thinner than any grid cell and the argmax
+    # aliases onto wrong theta) — found and fixed 2026-07-09, see log.
+    sig_e = SIG_E * float(np.std(E)) + 1e-2
+    sig_g = SIG_G * float(np.std(G)) + 1e-2
+
     def ll(theta):
-        return centered_energy_loglik(fam, theta, pts, E, SIG_E,
-                                      grads=G if use_grads else None, sigma_g=SIG_G)
+        return centered_energy_loglik(fam, theta, pts, E, sig_e,
+                                      grads=G if use_grads else None, sigma_g=sig_g)
     return chunked(ll)
 
 
