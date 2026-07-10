@@ -1,15 +1,20 @@
 # JOBS.md — SLURM state + handoff (phase 1, toy)
 
 Updated 2026-07-10 (post-attempt-3 review). **Two jobs in flight (gate3d program):**
-- 15633129 = d=2 coverage diagnostic (K=512 eval on b1 ckpt,
-  --legacy-tokens) -> gate3_d2cov.json. If d=2 mode_recovery -> ~1 at K=512:
-  RECLASSIFY d=2 drop as context-coverage/oracle-ceiling (reconvene item);
-  else lever 1b (family balance) fires.
-- 15633130 = lever 3 (head capacity 512^3, 200k, p1) -> gate3_headwide.json.
-  Readout: composite count + SW2 rows vs 2x-bespoke bars.
-DONE this program: lever 1a (one-hot d) REFUTED for d=2; lever 2 (400k)
-EXONERATED length (note: high run-to-run variance at low-ESS rows —
-composite count is the readout, not single rows).
+- 15635457 = T=5 d=2 eval diagnostic (b1 ckpt, --legacy-tokens) ->
+  gate3_t5.json. Tempered contexts DO mode-hop (K=512 at T=1 did not:
+  visit counts [1,201,94,154,61,1]). If mode_recovery -> ~1: d=2 drop is
+  CONTEXT-COVERAGE-limited; tempered-context protocol goes to the reconvene.
+  If covering context + still dropping: real model bug -> lever 1b.
+- 15635459 = lever 4 (pad-weight 0.1, 200k, p1) -> gate3_padw.json. The
+  padding hypothesis: conditional flows burn 75% of dims on noise transport
+  at d=4 (bespoke refs run at true d — systematic difference). Readout:
+  composite count + SW2 rows.
+DONE this program: 1a (one-hot d) refuted; lever 2 (400k) exonerated;
+lever 3 (head width) exonerated; d2cov-at-K=512 inconclusive (non-covering).
+Sharpness suspects remaining: padding (lever 4 in flight), then the
+objective/data regime itself (10 targets may be too few for sharp
+conditional interpolation — a gate-design question if lever 4 fails).
 Attempt-4 program itself is COMPLETE (gate3c log): gate (iii) RED at 1/10
 under P1-mirror criteria with the gap inventory below.
 - (a) pathway diagnostic: PASS (ESS 80-84%, no objective bug; width legit).
