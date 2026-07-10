@@ -1,26 +1,21 @@
 # JOBS.md — SLURM state + handoff (phase 1, toy)
 
-Updated 2026-07-10 (post-attempt-3 review). **Three jobs in flight**, all
-part of the review-directed attempt-4 program (log/2026-07-10-toy-gate3c.md):
-| job | what | readout |
-|-----|------|---------|
-| 15619456 | (a) pathway diagnostic: gate-2 pair overfit with --attn 2 --aux | GATE2-PASS at deep-sets levels => width is the lever; FAIL => pathway/objective bug, STOP scaling |
-| 15619457 | (b1) shortk ablation: attempt-3 config minus --shortk | d=2 rows only (gmm-d2 mode_recovery vs 0.67, dwell-d2 vs 0.50, logZ): confirms/refutes "shortK creates low-d ambiguity"; PASS/FAIL line void |
-| 15617204 | capacity probe (--wide, relabeled) | per-row mid-d ESS only; PASS/FAIL line void |
+Updated 2026-07-10 (post-attempt-3 review). **One job in flight: 15622335** — the gate-(iii)
+measurement under the pre-registered P1-mirror criteria (eval-only on the
+(b1) checkpoint; log/2026-07-10-toy-gate3c.md). Attempt-4 program state:
+- (a) pathway diagnostic: PASS (ESS 80-84%, no objective bug; width legit).
+- (b1) shortK ablation: d=2 hypothesis REFUTED; shortK REMOVED (it was the
+  mid-d sharpness killer: dwell-d4 0.2% -> 20.3% ESS without it).
+- capacity probe: width NOT the lever (mixed noise). Recipe: --attn --aux.
 
-## Harvest
-1. Read the three jsons (gate2_newarch.json, gate3_noshortk.json, gate3.json)
-   + jobout files; append readouts to log/2026-07-10-toy-gate3c.md; commit.
-2. Choose the d=2 fix per (b1): if confirmed, next arm = K-aware shortK
-   (restrict augmentation to d>=4), NOT dropping augmentation.
-3. THE GATE RE-RUN uses the pre-registered P1-mirror criteria:
-   `python scripts/gate3_minizoo.py --attn --aux [--shortk|d>=4-variant] --criteria p1 --out gate3_p1.json`
-   (+ --wide only if BOTH (a) passes and the capacity probe shows mid-d ESS
-   gains). Pre-log job + config hash first, as always.
-4. On GATE3-PASS under p1 criteria: commit gate (iii) green, then the gate-(iv)
-   chain below. Note: eval_full.py should gain the same funnel-K=512 handling
-   before gate (iv) evals (finding 3 applies there too) — small patch, do it
-   before submitting the arms.
+## Harvest for 15622335 (results/gate3_p1.json)
+Per-row composite vs bespoke refs; funnel rows = K=512 composite + K=128
+refusal correctness. Expected NOT a pass (see pre-registration): d=2 mode
+drop fails 2 rows; SW2-vs-2x-bespoke is the open sharpness gap. Next levers
+IN ORDER (pre-register each): (1) d=2 fix variables — d-embedding (one-hot d
+instead of scalar d/DMAX), per-family balance; (2) training length on the
+no-shortk recipe; (3) head capacity. On an eventual GATE3-PASS: patch
+eval_full.py with the same funnel-K=512 handling, then the gate-(iv) chain.
 
 ## Environment (everything assumes this)
 - venv `~/ics-env` (jax 0.9.1 + cuda12 plugin; distrax/diffrax dropped — see
