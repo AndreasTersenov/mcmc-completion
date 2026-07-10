@@ -16,7 +16,7 @@ import jax.numpy as jnp
 import jax.random as jr
 import numpy as np
 
-from .context import generate_context
+from .context import generate_context_for_target
 from .zoo import DMAX, logpdf, sample_target, sample_x
 
 
@@ -40,8 +40,7 @@ def build_zoo_dataset(key, specs, n_ctx, K, n_pool, temperature=1.0):
         kt, kc, kp = jr.split(jr.fold_in(key, 1000 * i + off), 3)
         t = sample_target(kt, family, d)
         targets.append(t)
-        fn = lambda x, _t=t: logpdf(_t, x)
-        cs = [generate_context(k, fn, d, K=K, temperature=temperature)
+        cs = [generate_context_for_target(k, t, K=K, temperature=temperature)
               for k in jr.split(kc, n_ctx)]
         ctxs.append(cs)
         tok.append(np.stack([np.asarray(c.tokens, np.float32) for c in cs]))
