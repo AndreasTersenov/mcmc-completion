@@ -8,4 +8,4 @@
 module load python/3.11.5 gcc cuda/12.6
 source "$HOME/ics-env/bin/activate"
 cd "$HOME/software/mcmc-completion"
-python -u scripts/gate3_minizoo.py --attn --aux --shortk
+python -u scripts/gate3_minizoo.py --attn --aux --shortk --wide

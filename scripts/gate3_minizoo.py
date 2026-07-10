@@ -66,6 +66,8 @@ def main():
     ap.add_argument("--attn", action="store_true", help="2 self-attention blocks")
     ap.add_argument("--aux", action="store_true", help="chain-summary tokens")
     ap.add_argument("--shortk", action="store_true", help="short-context augmentation")
+    ap.add_argument("--wide", action="store_true",
+                    help="attempt-4 encoder scale: enc_dim 256, hidden 512, 4 attn blocks")
     args = ap.parse_args()
     t0 = time.time()
     print(f"building dataset... (attn={args.attn} aux={args.aux} shortk={args.shortk})",
@@ -74,7 +76,10 @@ def main():
                                             aux_tokens=args.aux)
     print(f"dataset built in {time.time()-t0:.0f}s", flush=True)
 
-    model = ICSModel(n_attn=2 if args.attn else 0)
+    if args.wide:
+        model = ICSModel(enc_dim=256, enc_hidden=512, n_attn=4)
+    else:
+        model = ICSModel(n_attn=2 if args.attn else 0)
     params = model.init(
         jr.key(32), jnp.ones((2, DMAX), jnp.float32), jnp.ones((2,), jnp.float32),
         data.tokens[:2, 0],
