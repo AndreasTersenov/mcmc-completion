@@ -39,3 +39,28 @@ def ics_evaluate(model, params, target, ctx, key, n_eval=8192, n_ode=200):
     cert = snis_certificate(np.asarray(logp), np.asarray(logq))
     x_raw = whiten_invert(x_full[:, : target.d], ctx.mu, ctx.sigma)
     return cert, np.asarray(x_raw)
+
+
+def mode_recovery(target, x_gen):
+    """Fraction of DECLARED modes recovered (nearest-center assignment; mode j
+    recovered if its sample share >= w_j / 4). None when the family declares
+    no mode structure. Mandatory column in gate reports (reconvene 2026-07-10:
+    the P1 ESS clause alone cannot adjudicate multimodal targets)."""
+    from .zoo import mode_centers
+
+    mc = mode_centers(target)
+    if mc is None:
+        return None
+    mc = np.asarray(mc)
+    lw = getattr(target, "log_weights", None)
+    if lw is not None:
+        lw = np.asarray(lw)
+        w = np.exp(lw[np.isfinite(lw)])
+        w = w / w.sum()
+    else:
+        w = np.full(len(mc), 1.0 / len(mc))
+    if len(w) != len(mc):  # dwell: equal-weight well combinations
+        w = np.full(len(mc), 1.0 / len(mc))
+    d2 = ((x_gen[:, None, :] - mc[None, :, :]) ** 2).sum(-1)
+    share = np.bincount(d2.argmin(1), minlength=len(mc)) / len(x_gen)
+    return float((share >= w / 4.0).mean())

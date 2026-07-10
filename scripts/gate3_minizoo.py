@@ -29,7 +29,7 @@ import optax
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from ics.context import generate_context
-from ics.eval import ics_evaluate
+from ics.eval import ics_evaluate, mode_recovery
 from ics.models import ICSModel
 from ics.train import build_zoo_dataset, make_train_step, save_checkpoint
 from ics.zoo import DMAX, logpdf, sample_target, sample_x
@@ -56,7 +56,8 @@ def eval_on(model, params, target, ctx, seed):
                               rng=np.random.default_rng(seed + 1))
     ok = (cert["ess_frac_2n"] >= 0.05 and cert["stable"]
           and abs(cert["logz"]) <= 0.1 and sw2 <= max(3.0 * floor, 0.1))
-    return dict(passed=bool(ok), sw2=float(sw2), sw2_floor=float(floor), **cert)
+    return dict(passed=bool(ok), sw2=float(sw2), sw2_floor=float(floor),
+                mode_recovery=mode_recovery(target, x_gen), **cert)
 
 
 def main():

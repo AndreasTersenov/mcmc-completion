@@ -26,30 +26,11 @@ import numpy as np
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from ics.context import Context
-from ics.eval import ics_evaluate
+from ics.eval import ics_evaluate, mode_recovery
 from ics.models import ICSModel
 from ics.train import load_checkpoint
 from ics.zoo import DMAX, mode_centers, sample_x
 from stage0.sliced_w2 import sliced_w2_squared
-
-
-def mode_recovery(target, x_gen):
-    mc = mode_centers(target)
-    if mc is None:
-        return None
-    mc = np.asarray(mc)
-    if hasattr(target, "log_weights"):
-        w = np.exp(np.asarray(target.log_weights))
-        w = w[np.isfinite(np.asarray(target.log_weights))] if w.ndim else w
-        w = w / w.sum()
-    else:
-        w = np.full(len(mc), 1.0 / len(mc))
-    if len(w) != len(mc):  # dwell: equal-weight well combinations
-        w = np.full(len(mc), 1.0 / len(mc))
-    d2 = ((x_gen[:, None, :] - mc[None, :, :]) ** 2).sum(-1)
-    share = np.bincount(d2.argmin(1), minlength=len(mc)) / len(x_gen)
-    recovered = share >= w / 4.0
-    return float(recovered.mean())
 
 
 def main():

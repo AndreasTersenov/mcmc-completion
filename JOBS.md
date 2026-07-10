@@ -14,7 +14,9 @@ NOT be submitted until gate (iii) is green (frozen ladder).
 - `~/software/jax_flows` on local branch `rorqual-compat` (do not push).
 - Full test suite: 105 green. Stop hook runs it via ics-env.
 
-## Gate (iii) attempt-3 plan (next session's first job)
+## Gate (iii) attempt-3 plan (APPROVED at reconvene 2026-07-10 with four
+## additions — see log/2026-07-10-reconvene-gate3.md; err-wide x3 arms +
+## hybrid learned scale correction added below)
 Two independent fixes, test cheapest-first, ONE variable at a time:
 1. **Whitening scale (funnel killer).** Proven: FM head hits the sampling
    floor on funnels when whitened with true pool moments (login diagnostic in
@@ -55,8 +57,11 @@ attempt 3, ICSModel defaults change → datagen is unaffected, but re-hash.
 
 ## After eval jsons land — P-verdict assembly
 - P1: eval_train4, heldout=False, d<=8: fraction d2_hat <= 4.6 (ESS >= 1%)
-  >= 80%; SW2 within 2x baseline-2. NOTE: gate-3 attempt 2 already shows
-  7/10 training targets clearing the ESS bar on fresh contexts.
+  >= 80%; SW2 within 2x baseline-2. NOTE: gate-3 attempt 2 shows 7/10
+  training targets clearing the ESS CLAUSE only — P1 is a composite (ESS AND
+  SW2 vs baseline-2), and ESS alone cannot adjudicate multimodal targets
+  (mode drop evades it). Reconvene 2026-07-10: mode-recovery column is
+  mandatory in every gate report.
 - P2/P3: heldout=True rows; P3 confusion matrix separates mode-drop via the
   mode_recovery column (gate-3 showed the blind spot behaves exactly as
   stage-0 predicted: dropped modes read ESS 19% STABLE with logZ = ln(mass)).
