@@ -105,13 +105,13 @@ def b4_mclmc(target, ctx, seed, budget_s):
     ld = lambda x: logpdf(target, x[None, :])[0]
     key = jr.key(seed)
     state = blackjax.mcmc.mclmc.init(position=jnp.zeros(d), logdensity_fn=ld, rng_key=key)
-    kernel = lambda inverse_mass_matrix: blackjax.mcmc.mclmc.build_kernel(
-        logdensity_fn=ld, integrator=blackjax.mcmc.integrators.isokinetic_mclachlan,
-        inverse_mass_matrix=inverse_mass_matrix)
+    kernel = lambda sqrt_diag_cov: blackjax.mcmc.mclmc.build_kernel(
+        logdensity_fn=ld, sqrt_diag_cov=sqrt_diag_cov,
+        integrator=blackjax.mcmc.integrators.isokinetic_mclachlan)
     t0 = time.time()
     (state_t, params_t), _ = blackjax.adaptation.mclmc_adaptation.mclmc_find_L_and_step_size(
         mclmc_kernel=kernel, num_steps=2000, state=state, rng_key=jr.fold_in(key, 1))
-    kern = kernel(params_t.inverse_mass_matrix if hasattr(params_t, "inverse_mass_matrix") else jnp.ones(d))
+    kern = kernel(params_t.sqrt_diag_cov)
     samples = []
     st_ = state_t
     while time.time() - t0 < budget_s and len(samples) < 4 * N_EVAL:
@@ -149,6 +149,8 @@ def main():
         rec["b4"] = b4_mclmc(t, ctx, 70_000 + 100*n, budget_s=max(ics_seconds, 5.0))
         rec["seconds"] = round(time.time() - t1, 1)
         out["rows"].append(rec)
+        json.dump(out, open(os.path.join(os.path.dirname(__file__), "..", "results",
+                                         "baselines.json"), "w"), indent=2)
         print(f"[{n+1}/12] {f}-d{d}: b2 sw2={rec['b2']['sw2']:.3f} ess={rec['b2']['ess_frac_2n']:.3f} | "
               f"b3 sw2={rec['b3']['sw2']:.3f} | b4 sw2={rec['b4']['sw2']:.3f} [{rec['seconds']}s]", flush=True)
     json.dump(out, open(os.path.join(os.path.dirname(__file__), "..", "results",
