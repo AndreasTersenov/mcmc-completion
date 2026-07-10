@@ -1,8 +1,14 @@
 # JOBS.md — SLURM state + handoff (phase 1, toy)
 
-Updated 2026-07-10 (post-attempt-3 review). **No jobs in flight.** The attempt-4 program is COMPLETE and harvested
-(log/2026-07-10-toy-gate3c.md): gate (iii) stays RED at 1/10 under the
-P1-mirror criteria, with a precise gap inventory.
+Updated 2026-07-10 (post-attempt-3 review). **Two jobs in flight (gate3d lever program, log/2026-07-10-toy-gate3d.md):**
+- 15627064 = lever 1a (one-hot d-embedding, 200k, p1) -> gate3_d1.json.
+  Readout: d=2 mode_recovery/logZ vs b1 (0.67/0.50, ln covered mass).
+- 15627065 = lever 2 (400k on b1 recipe, p1) -> gate3_400k.json.
+  Readout: SW2 vs 2x-bespoke bar as the cosine stretches; loss curve.
+Harvest: append readouts to gate3d log; if 1a fixes d=2, next combine
+winners (one run); if SW2 stalls at 400k, lever 3 = head capacity.
+Attempt-4 program itself is COMPLETE (gate3c log): gate (iii) RED at 1/10
+under P1-mirror criteria with the gap inventory below.
 - (a) pathway diagnostic: PASS (ESS 80-84%, no objective bug; width legit).
 - (b1) shortK ablation: d=2 hypothesis REFUTED; shortK REMOVED (it was the
   mid-d sharpness killer: dwell-d4 0.2% -> 20.3% ESS without it).
