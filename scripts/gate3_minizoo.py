@@ -117,6 +117,8 @@ def main():
     ap.add_argument("--ckpt-in", default=None)
     ap.add_argument("--donehot", action="store_true", help="lever 1a: one-hot d slots")
     ap.add_argument("--steps", type=int, default=STEPS)
+    ap.add_argument("--k-d2eval", type=int, default=0,
+                    help="if >0, evaluate d=2 rows with this K (coverage diagnostic)")
     ap.add_argument("--criteria", choices=["legacy", "p1"], default="legacy",
                     help="p1: pre-registered P1-mirror composite, funnels at K=512"
                          " (log/2026-07-10-toy-gate3c.md section c)")
@@ -162,7 +164,8 @@ def main():
     for j, ((family, d), t) in enumerate(zip(SPECS, targets)):
         fn = lambda x, _t=t: logpdf(_t, x)
         if args.criteria == "p1":
-            k_eval = 512 if family == "funnel" else K
+            k_eval = 512 if family == "funnel" else (
+                args.k_d2eval if (args.k_d2eval and d == 2) else K)
             fresh_ctx = generate_context(jr.key(9000 + j), fn, d, K=k_eval,
                                          aux_tokens=args.aux)
             ref = bespoke_ref_sw2(t, fresh_ctx, 20_000 + 10 * j)
