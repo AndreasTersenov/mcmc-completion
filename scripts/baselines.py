@@ -112,9 +112,13 @@ def b4_mclmc(target, ctx, seed, budget_s):
     state_t, params_t = blackjax.adaptation.mclmc_adaptation.mclmc_find_L_and_step_size(
         mclmc_kernel=kernel, num_steps=2000, state=state, rng_key=jr.fold_in(key, 1))
     kern = kernel(params_t.sqrt_diag_cov)
+    adapt_seconds = time.time() - t0
     samples = []
     st_ = state_t
-    while time.time() - t0 < budget_s and len(samples) < 4 * N_EVAL:
+    t0 = time.time()  # sampling budget starts AFTER adaptation (reported separately;
+    # generous to MCLMC — strengthens P7 if ICS still wins amortized)
+    while len(samples) == 0 or (time.time() - t0 < budget_s
+                                and len(samples) * 512 < 4 * N_EVAL):
         def step(s, k):
             s, _ = kern(k, s, params_t.L, params_t.step_size)
             return s, s.position
@@ -122,7 +126,8 @@ def b4_mclmc(target, ctx, seed, budget_s):
         samples.append(np.asarray(pos))
     x_gen = np.concatenate(samples)[-2*N_EVAL:]
     sw2, mr = sw2_and_modes(target, x_gen, seed+6)
-    return dict(sw2=sw2, mode_recovery=mr, seconds=time.time()-t0)
+    return dict(sw2=sw2, mode_recovery=mr, sample_seconds=time.time()-t0,
+                adapt_seconds=adapt_seconds)
 
 def main():
     # measure ICS inference wall-clock for B4 matching
