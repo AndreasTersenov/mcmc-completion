@@ -1,18 +1,18 @@
 # JOBS.md — SLURM state + handoff (phase 1, toy)
 
-Updated 2026-07-10 (GATE (iv) LAUNCHED, authorized by
-log/2026-07-10-reconvene-paired.md; pre-registration + full job table in
-log/2026-07-10-toy-gate4.md). **21 jobs queued/running:**
-datagen 15651223 (train4) / 15651225 (train2) / 15651226 (eval);
-arm chains train4 15651227-29, train2 15651230-32, train4ng 15652690-92
-(original 15651233-35 fast-failed on a read-only-npz bug in the nograd
-path, fixed + resubmitted — see gate4 log)
-(1.6M steps each = gate3e's 260 steps/pair held fixed at 6144 pairs);
-per-arm post: evals: train4/train2 HARVESTED (results/eval_train4.json, eval_train2.json); train4ng eval resubmitted as 15671028 (original hit the pre-fix arch bug) -> results/eval_<arm>.json (dual (K,T)
-columns, fresh-theta regime), sanity floors 15651239-40 + 15652694 ->
-results/sanity_<arm>.json (trained-target regime, floor >= 6/24 & med ESS
->= 1%), paired instruments 15651242-43 + 15652695 -> results/paired_<arm>.json
-(P-scale: median(gate3e)/median(arm) > 1 on T=1).
+Updated 2026-07-10 (harvest directives executing). **Two jobs in flight:**
+- 15671767 baselines B2/B3/B4 (12-target subset; ~2.4h; TIMEOUT risk noted —
+  json written at END; if TIMEOUT, cut B2 steps to 200k and rerun)
+- 15671768 B1 untrained-floor eval -> results/eval_untrained.json
+DONE: audit (banana d>=8 excluded, K512 verified); assembly
+(results/assembly_tables.txt); P2/P11/P12/P-scale adjudicated; sanity
+relative (no broken arm); RESULTS-toy.md DRAFTED (baselines slots marked).
+## On baselines harvest
+1. P1 SW2 clause: eval_train4 subset rows' sw2 vs 2x B2 sw2 -> final P1.
+2. P3 anchor sensitivity: bad = sw2 > 10x B2-sw2 on subset; report shift.
+3. P7: B4-vs-ICS SW2 at matched wall-clock + amortized-cost statement.
+4. Baseline table -> RESULTS-toy.md; remove DRAFT banner; commit; K-T1
+   statement stands (does not fire).
 
 ## Harvest (in order; keep regimes SEPARATED in every report)
 1. Check sanity floors first: a SANITY-FLOOR-FAIL invalidates that arm
