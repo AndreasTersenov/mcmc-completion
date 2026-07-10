@@ -188,8 +188,11 @@ def main():
         if args.criteria == "p1":
             k_eval = 512 if family == "funnel" else (
                 args.k_d2eval if (args.k_d2eval and d == 2) else K)
+            t_eval = args.t_d2eval if (args.t_d2eval > 0 and d == 2) else 1.0
             fresh_ctx = generate_context(jr.key(9000 + j), fn, d, K=k_eval,
-                                         aux_tokens=args.aux)
+                                         aux_tokens=args.aux,
+                                         d_onehot=args.donehot,
+                                         temperature=t_eval)
             ref = bespoke_ref_sw2(t, fresh_ctx, 20_000 + 10 * j)
             fresh_ctx = _tok(fresh_ctx)
             r = eval_on_p1(model, params, t, fresh_ctx, 10_000 + 10 * j, ref)
