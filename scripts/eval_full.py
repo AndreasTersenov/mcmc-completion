@@ -46,7 +46,7 @@ def main():
         rows = pickle.load(f)
     ck = load_checkpoint(args.ckpt)
     params = jax.tree_util.tree_map(jnp.asarray, ck["params"])
-    model = ICSModel()
+    model = ICSModel(n_attn=2)
 
     out = []
     t0 = time.time()
