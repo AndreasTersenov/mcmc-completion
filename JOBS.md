@@ -1,21 +1,18 @@
 # JOBS.md — SLURM state + handoff (phase 1, toy)
 
-Updated 2026-07-10 (gate3d, fixed wiring — see VOID notice in
-log/2026-07-10-toy-gate3d.md). **Two jobs in flight:**
-- 15638175 = T=5 d=2 diagnostic, temperature ACTUALLY applied ->
-  gate3_t5.json (overwrites void result). Readout: d=2 mode_recovery/logZ
-  with genuinely covering tempered contexts.
-- 15638176 = lever 1a RE-EVAL with matching one-hot eval contexts ->
-  gate3_d1_fixed.json (original 1a verdict void: train/eval token mismatch).
-LEDGER: lever 2 (length) exonerated; lever 3 (head width) exonerated;
-lever 4 (pad-weight) plausible-but-unproven (warp rows improve, composite
-unchanged); 1a and the tempered-context question pending the fixed runs.
-If sharpness still stalls after lever 4 + 1a-reeval: the data regime
-(10 targets) is the last suspect -> gate-DESIGN question for the reconvene,
-alongside the tempered-context protocol question.
-PROCESS RULE (adopted after two silent no-op edits, then a third caught by
-git): grep-verify every scripted replace; byte-identical outputs across a
-changed condition = no-op alarm, not a finding.
+Updated 2026-07-10 (gate3d program CONCLUDED — see
+log/2026-07-10-toy-gate3d.md). **No jobs in flight.** Awaiting reconvene on
+two protocol/eval-design decisions before further gate-(iii) attempts:
+1. TEMPERED CONTEXTS (evidence: same checkpoint, zero-shot T=5 d=2 contexts
+   take gmm-d2 logZ from -0.77 to -0.045 and recovery 0.67 -> 0.83 — the
+   d=2 "mode drop" is substantially context-coverage-limited, third instance
+   of a bar exceeding what the context identifies).
+2. SHARPNESS at mini-zoo scale (pathway/length/enc-width/head-width all
+   exonerated; pad-weight plausible-unproven; last suspect = the 10-target
+   regime; question: grow the mini-zoo or recalibrate the 2x-bespoke bar).
+Lever ledger: 1a (one-hot d) refuted on valid evidence; shortK removed;
+recipe = --attn --aux, narrow. PROCESS RULE: grep-verify every scripted
+replace (three silent no-ops this session, all caught).
 
 ## Gap inventory after the P1-mirror measurement (results/gate3_p1.json)
 - warp-d2 PASSES (first certified target); ESS clause solved on 6/10 rows.
