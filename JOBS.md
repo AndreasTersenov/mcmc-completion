@@ -1,12 +1,13 @@
 # JOBS.md — SLURM state + handoff (phase 1, toy)
 
-Updated 2026-07-10 (harvest directives executing). **Two jobs in flight:**
-- 15671767 baselines B2/B3/B4 (12-target subset; ~2.4h; TIMEOUT risk noted —
-  json written at END; if TIMEOUT, cut B2 steps to 200k and rerun)
-- 15671768 B1 untrained-floor eval -> results/eval_untrained.json
-DONE: audit (banana d>=8 excluded, K512 verified); assembly
-(results/assembly_tables.txt); P2/P11/P12/P-scale adjudicated; sanity
-relative (no broken arm); RESULTS-toy.md DRAFTED (baselines slots marked).
+Updated 2026-07-10 (PHASE 1 HARVEST COMPLETE). **No jobs in flight.**
+RESULTS-toy.md is FINAL (all P-verdicts, baselines 1-4, K-T1 does not
+fire). Awaiting reconvene on: (a) the staged follow-ups (2M/longer arms,
+T-corrected whitening arm, banana-warp numeric fix, certificate
+dispersion-check against the P3 blind spot); (b) phase-2 scoping.
+The 12 gate-(iv) chain jobs + 4 baseline jobs are all COMPLETED/harvested;
+full ledger in log/2026-07-10-toy-gate4.md. Budget ~32/480 H100-hours.
+
 ## On baselines harvest
 1. P1 SW2 clause: eval_train4 subset rows' sw2 vs 2x B2 sw2 -> final P1.
 2. P3 anchor sensitivity: bad = sw2 > 10x B2-sw2 on subset; report shift.
