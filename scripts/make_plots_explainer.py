@@ -112,13 +112,14 @@ def main():
     ax.plot(s1[:, 0], s1[:, 1], "o", color=BLUE, ms=2.2, alpha=0.45)
     for m in mc:
         ax.plot(*m, "x", color=INK, ms=7, markeredgewidth=1.6)
-    ax.annotate("certificate (measured):\nESS = 8%,  logẐ = −0.77\n"
-                "= ln(46%) — it PRICES the\nmass the samples miss",
+    ax.annotate("SHARP but missing 54% of the mass\n"
+                "certificate: ESS = 8%, logẐ = −0.77 = ln(46%)\n"
+                "— it PRICES the missing modes exactly",
                 (0.03, 0.03), xycoords="axes fraction", fontsize=8.5,
                 color=RED, va="bottom")
     ax.set_title("WHAT IT EMITS — 1500 samples, zero retraining\n"
-                 "chains visited 4/6 modes → model covers those 4\n"
-                 "(the certificate sees exactly what's missing)",
+                 "looks clean — but 2 modes are silently absent;\n"
+                 "only the certificate tells you",
                  fontsize=9.5, color=INK)
     ax.set_xlim(-9, 9); ax.set_ylim(-9, 9)
 
@@ -128,13 +129,15 @@ def main():
     ax.plot(s5[:, 0], s5[:, 1], "o", color=AQUA, ms=2.2, alpha=0.45)
     for m in mc:
         ax.plot(*m, "x", color=INK, ms=7, markeredgewidth=1.6)
-    ax.annotate("certificate (measured):\nESS = 18%,  logẐ = −0.045 ≈ 0\n"
-                "coverage fixed → certificate\nagrees, zero-shot",
-                (0.03, 0.03), xycoords="axes fraction", fontsize=8.5,
+    ax.annotate("COVERS the mass (logẐ ≈ 0) — but BLURRY:\n"
+                "SW2² = 3.5 vs floor 0.005. Certificate: ESS 18%\n"
+                "(better than B: missing modes is the worse sin).\n"
+                "This blur IS the sharpness gap gate (iv) attacks.",
+                (0.03, 0.03), xycoords="axes fraction", fontsize=8.2,
                 color="#0a7a4d", va="bottom")
     ax.set_title("SAME MODEL, HOTTER PROBES (T=5)\n"
-                 "tempered chains hop between modes →\n"
-                 "context covers → samples cover",
+                 "coverage fixed, sharpness not — the honest\n"
+                 "trade-off, and the open problem",
                  fontsize=9.5, color=INK)
     ax.set_xlim(-9, 9); ax.set_ylim(-9, 9)
 
