@@ -109,7 +109,7 @@ def b4_mclmc(target, ctx, seed, budget_s):
         logdensity_fn=ld, sqrt_diag_cov=sqrt_diag_cov,
         integrator=blackjax.mcmc.integrators.isokinetic_mclachlan)
     t0 = time.time()
-    (state_t, params_t), _ = blackjax.adaptation.mclmc_adaptation.mclmc_find_L_and_step_size(
+    state_t, params_t = blackjax.adaptation.mclmc_adaptation.mclmc_find_L_and_step_size(
         mclmc_kernel=kernel, num_steps=2000, state=state, rng_key=jr.fold_in(key, 1))
     kern = kernel(params_t.sqrt_diag_cov)
     samples = []
