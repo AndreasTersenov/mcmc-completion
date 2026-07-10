@@ -27,7 +27,7 @@ import jax.numpy as jnp
 import jax.random as jr
 
 from ics.cfm import cond_cfm_sample
-from ics.context import generate_context_for_target, whiten_invert
+from ics.context import generate_context, whiten_invert
 from ics.models import ICSModel
 from ics.train import build_zoo_dataset, load_checkpoint
 from ics.zoo import logpdf, mode_centers
@@ -62,14 +62,19 @@ def main():
         jnp.asarray,
         load_checkpoint(os.path.join(R, "gate3_noshortk_params.pkl"))["params"])
 
-    ctx1 = generate_context_for_target(jr.key(9000), t, K=128, temperature=1.0,
-                                       aux_tokens=True)
-    ctx5 = generate_context_for_target(jr.key(9000), t, K=128, temperature=5.0,
-                                       aux_tokens=True)
+    # IMPORTANT: use the GENERIC context path with the SAME key the T-diagnostic
+    # used, so the plotted samples correspond to the MEASURED certificate
+    # numbers (the jitted path draws different chains from the same key —
+    # caught when the plotted T=5 cloud missed modes the diagnostic covered).
+    fn = lambda x: logpdf(t, x)
+    ctx1 = generate_context(jr.key(9000), fn, 2, K=128, temperature=1.0,
+                            aux_tokens=True)
+    ctx5 = generate_context(jr.key(9000), fn, 2, K=128, temperature=5.0,
+                            aux_tokens=True)
 
     def model_samples(ctx, seed):
         toks = strip_onehot_tokens(ctx.tokens).astype(jnp.float64)
-        xw = cond_cfm_sample(model, params, toks, jr.key(seed), n=1500, n_steps=80)
+        xw = cond_cfm_sample(model, params, toks, jr.key(seed), n=1500, n_steps=100)
         return np.asarray(whiten_invert(xw[:, :2], ctx.mu, ctx.sigma))
 
     s1 = model_samples(ctx1, 61)
