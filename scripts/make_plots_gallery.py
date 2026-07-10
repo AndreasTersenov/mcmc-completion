@@ -44,38 +44,39 @@ def median_idx(fam, d):
     cand.sort(key=lambda r: r["t5"]["ess_frac_2n"])
     return cand[len(cand) // 2]
 
-fig, axes = plt.subplots(2, 3, figsize=(13.2, 8.6))
-for ax, (fam, d) in zip(axes.ravel(), CELLS):
+fig, axes = plt.subplots(3, 4, figsize=(14.5, 10.2))
+pairs = [(axes[i // 2, 2 * (i % 2)], axes[i // 2, 2 * (i % 2) + 1])
+         for i in range(6)]
+for (axT, axM), (fam, d) in zip(pairs, CELLS):
     meta = median_idx(fam, d)
     row = next(r for r in evalset if (r["family"], r["d"], r["idx"]) ==
                (fam, d, meta["idx"]))
     t = row["target"]
     ctx = Context(**{k: jnp.asarray(v) for k, v in row["context_t5"]._asdict().items()})
     xw = cond_cfm_sample(model, params, ctx.tokens.astype(jnp.float64),
-                         jr.key(4242), n=800, n_steps=60)
+                         jr.key(4242), n=4000, n_steps=60)
     xs = np.asarray(whiten_invert(xw[:, :d], ctx.mu, ctx.sigma))
-    truth = np.asarray(sample_x(jr.key(4243), t, 800))
-    lo = np.minimum(truth.min(0), xs.min(0))[:2] - 1
-    hi = np.maximum(truth.max(0), xs.max(0))[:2] + 1
-    if d == 2:
-        g0, g1 = np.linspace(lo[0], hi[0], 161), np.linspace(lo[1], hi[1], 161)
-        X, Y = np.meshgrid(g0, g1, indexing="ij")
-        Z = np.exp(np.asarray(logpdf(t, jnp.asarray(np.stack([X.ravel(), Y.ravel()], 1)))
-                              ).reshape(161, 161))
-        ax.contour(X, Y, Z, levels=np.max(Z) * np.array([0.03, 0.15, 0.5]),
-                   colors=MUTED, linewidths=0.8)
-    else:
-        ax.plot(truth[:, 0], truth[:, 1], "o", ms=2.6, alpha=0.35, color=MUTED)
-    ax.plot(xs[:, 0], xs[:, 1], "o", ms=2.8, alpha=0.5, color=COL[fam])
+    truth = np.asarray(sample_x(jr.key(4243), t, 20_000))
+    # robust shared limits: truth quantiles padded (model outliers can explode)
+    lo = np.quantile(truth[:, :2], 0.002, axis=0) - 1.5
+    hi = np.quantile(truth[:, :2], 0.998, axis=0) + 1.5
+    bins = [np.linspace(lo[k], hi[k], 81) for k in (0, 1)]
+    axT.hist2d(truth[:, 0], truth[:, 1], bins=bins, cmap="Greys")
+    axM.hist2d(xs[:, 0], xs[:, 1], bins=bins, cmap="Blues")
+    inside = float(np.mean((xs[:, 0] >= lo[0]) & (xs[:, 0] <= hi[0])
+                           & (xs[:, 1] >= lo[1]) & (xs[:, 1] <= hi[1])))
     held = " (NEVER TRAINED ON)" if meta["heldout"] else ""
     c5 = meta["t5"]
-    ax.set_title(f"{fam}-d{d}{held}\nmeasured: ESS {c5['ess_frac_2n']*100:.2g}%, "
-                 f"logẐ {c5['logz']:+.2f}, SW2² {c5['sw2']:.2f}",
-                 fontsize=9, color=INK2 if not meta["heldout"] else COL["banana"])
-    if d > 2:
-        ax.set_xlabel("first 2 of %d coords (grey = exact samples)" % d, fontsize=8)
-fig.suptitle("The 1024-target model on FRESH targets, by eye — median-ESS pick per cell,\n"
-             "conditioned on the exact contexts the eval measured (T=5 column)",
+    tcol = INK2 if not meta["heldout"] else COL["banana"]
+    axT.set_title(f"{fam}-d{d}{held}\nTRUTH (exact samples)", fontsize=8.5, color=tcol)
+    axM.set_title(f"MODEL — ESS {c5['ess_frac_2n']*100:.2g}%, logẐ {c5['logz']:+.2f},"
+                  f" SW2² {c5['sw2']:.2f}\n({100*inside:.0f}% of model mass in frame)",
+                  fontsize=8.5, color=tcol)
+    for a in (axT, axM):
+        a.set_xlim(lo[0], hi[0]); a.set_ylim(lo[1], hi[1])
+        a.set_xticks([]); a.set_yticks([])
+fig.suptitle("TRUTH vs MODEL as densities — fresh targets, median-ESS pick per cell,\n"
+             "same axes per pair; measured certificate per panel (T=5 column)",
              fontsize=11, color=INK)
 fig.tight_layout(rect=[0, 0, 1, 0.95])
 fig.savefig(os.path.join(R, "sample_gallery.png"), dpi=160)
