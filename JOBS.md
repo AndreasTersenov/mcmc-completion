@@ -1,18 +1,20 @@
 # JOBS.md — SLURM state + handoff (phase 1, toy)
 
-Updated 2026-07-10 (paired eval in flight). **One job: 15647929 = PAIRED
-EVAL** (log/2026-07-10-paired-eval.md; verdict rule pre-registered).
-Harvest -> branch:
-- PAIRED-B (improvement >= 1.5x): assemble reconvene evidence package, STOP
-  (no bar movement here).
-- PAIRED-A (< 1.5x): launch the staged 2M chain immediately:
-    J1=$(sbatch --parsable scripts/slurm/train128_2m.sh)
-    J2=$(sbatch --parsable --dependency=afterany:$J1 scripts/slurm/train128_2m.sh)
-    J3=$(sbatch --parsable --dependency=afterany:$J2 scripts/slurm/train128_2m.sh)
-    sbatch --dependency=afterany:$J3 scripts/slurm/paired_eval_2m.sh
-  (~5.5h train across 3 b1 slots + paired re-eval vs the 2M checkpoint;
-  pre-log job IDs + config hashes in log/2026-07-10-paired-eval.md first.)
-Story figure: results/gate3_story.png. Budget ~13.5/480 H100-hours.
+Updated 2026-07-10 (paired eval harvested). **No jobs in flight. STOPPED
+per directive** — evidence package assembled for the reconvene bar
+conversation (log/2026-07-10-paired-eval.md):
+- VERDICT: PAIRED-B-AMORTIZATION. 128-model better on 18/24 paired targets
+  (sign-test p~0.011); medians T=1 905->549 (1.65x), T=5 855->342 (2.5x),
+  at 10x less compute per pair. The gate3e P-sharp fail was a
+  population/theta artifact; the paired instrument reverses the conclusion.
+- CONTEXT: paired eval ran on FRESH theta (P1's generalization regime) where
+  both models are far from bars — distinct from gate-(iii)'s trained-target
+  regime. Decision requested from reconvene: redefine gate-(iii) sharpness
+  via the paired instrument, and/or proceed to gate-(iv) scale (1024
+  targets) on the measured scaling direction.
+- The 2M-compute chain remains STAGED (scripts/slurm/train128_2m.sh +
+  paired_eval_2m.sh) if the compute axis is wanted.
+Story figure: results/gate3_story.png. Budget ~14/480 H100-hours.
 
 ## Gap inventory after the P1-mirror measurement (results/gate3_p1.json)
 - warp-d2 PASSES (first certified target); ESS clause solved on 6/10 rows.
