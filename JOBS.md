@@ -1,10 +1,19 @@
 # JOBS.md — SLURM state + handoff (phase 1, toy)
 
-Updated 2026-07-10 (early). **No jobs queued or running.** Gates (i)+(ii)
-GREEN and committed. Gate (iii) RED after two attempts — two structural
-diagnoses, both pinned by cheap reproducible experiments (see
-log/2026-07-09-toy-gate3.md). Gate (iv) infrastructure is committed but MUST
-NOT be submitted until gate (iii) is green (frozen ladder).
+Updated 2026-07-10 (post-reconvene). **One job in flight: 15613098 = gate
+(iii) attempt 3** (encoder arm: --attn --aux --shortk; pre-registered in
+log/2026-07-10-toy-gate3b.md; monitor via jobout/gate3_15613098.out, verdict
+line GATE3-PASS/FAIL + results/gate3.json with the mandatory mode_recovery
+column). Whitening RESOLVED: study (job 15612008) kept the status quo and
+rejected the x3 err-wide arms — see log/2026-07-10-reconvene-gate3.md.
+Gates (i)+(ii) GREEN. Gate (iv) MUST NOT be submitted until (iii) is green.
+
+## Harvest for 15613098
+- PASS -> append verdict+numbers to log/2026-07-10-toy-gate3b.md, commit
+  (gate green+committed), then submit gate (iv) recipe below.
+- FAIL -> compare per-failure-mode vs attempt 2 (results/gate3.json history
+  in git): did mode-drop rows heal? funnels? Next lever per pre-registration
+  is architecture SCALE (wider encoder / more blocks), not more steps.
 
 ## Environment (everything assumes this)
 - venv `~/ics-env` (jax 0.9.1 + cuda12 plugin; distrax/diffrax dropped — see
