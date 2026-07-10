@@ -8,7 +8,7 @@ arm chains train4 15651227-29, train2 15651230-32, train4ng 15652690-92
 (original 15651233-35 fast-failed on a read-only-npz bug in the nograd
 path, fixed + resubmitted — see gate4 log)
 (1.6M steps each = gate3e's 260 steps/pair held fixed at 6144 pairs);
-per-arm post: evals 15651236-37 + 15652693 -> results/eval_<arm>.json (dual (K,T)
+per-arm post: evals: train4/train2 HARVESTED (results/eval_train4.json, eval_train2.json); train4ng eval resubmitted as 15671028 (original hit the pre-fix arch bug) -> results/eval_<arm>.json (dual (K,T)
 columns, fresh-theta regime), sanity floors 15651239-40 + 15652694 ->
 results/sanity_<arm>.json (trained-target regime, floor >= 6/24 & med ESS
 >= 1%), paired instruments 15651242-43 + 15652695 -> results/paired_<arm>.json
