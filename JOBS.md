@@ -1,18 +1,17 @@
 # JOBS.md — SLURM state + handoff (phase 1, toy)
 
-Updated 2026-07-10 (gate3d program CONCLUDED — see
-log/2026-07-10-toy-gate3d.md). **No jobs in flight.** Awaiting reconvene on
-two protocol/eval-design decisions before further gate-(iii) attempts:
-1. TEMPERED CONTEXTS (evidence: same checkpoint, zero-shot T=5 d=2 contexts
-   take gmm-d2 logZ from -0.77 to -0.045 and recovery 0.67 -> 0.83 — the
-   d=2 "mode drop" is substantially context-coverage-limited, third instance
-   of a bar exceeding what the context identifies).
-2. SHARPNESS at mini-zoo scale (pathway/length/enc-width/head-width all
-   exonerated; pad-weight plausible-unproven; last suspect = the 10-target
-   regime; question: grow the mini-zoo or recalibrate the 2x-bespoke bar).
-Lever ledger: 1a (one-hot d) refuted on valid evidence; shortK removed;
-recipe = --attn --aux, narrow. PROCESS RULE: grep-verify every scripted
-replace (three silent no-ops this session, all caught).
+Updated 2026-07-10 (rulings executed). **One job in flight: 15640033 =
+gate (iii) at 128 targets** (log/2026-07-10-toy-gate3e.md; T-mix contexts
+[1,1,2,2,5,5], dual (K,T) eval columns, funnels K=512, P-sharp bar: median
+SW2/bespoke <= 31 vs 62 at 10 targets). ~2-2.5h on a full H100.
+Harvest: results/gate3e.json — verdict line carries GATE3-PASS/FAIL AND
+P-SHARP-PASS/FAIL separately. On GATE3-PASS: patch eval_full.py with
+funnel-K=512 + (K,T) columns, then the gate-(iv) chain (recipe below now
+needs --aux + T-mix datagen updates before submission — gen_zoo_data.py
+predates Ruling 1). On P-sharp FAIL: architecture finding -> bar conversation
+at reconvene WITH evidence, as ruled.
+Story figure: results/gate3_story.png (coverage law, T-vs-K, sharpness gap,
+shortK lever).
 
 ## Gap inventory after the P1-mirror measurement (results/gate3_p1.json)
 - warp-d2 PASSES (first certified target); ESS clause solved on 6/10 rows.
