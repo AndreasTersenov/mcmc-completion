@@ -85,13 +85,18 @@ def eval_one(model, params, target, ctx, seed, ref):
 
 
 def main():
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--z128-ckpt", default=None, help="override 128-model ckpt path")
+    ap.add_argument("--out", default="paired_eval.json")
+    args = ap.parse_args()
     t0 = time.time()
     base = os.path.join(os.path.dirname(__file__), "..", "results")
     model = ICSModel(n_attn=2)  # identical arch for both checkpoints
     pb1 = jax.tree_util.tree_map(
         jnp.asarray, load_checkpoint(os.path.join(base, "gate3_noshortk_params.pkl"))["params"])
     p128 = jax.tree_util.tree_map(
-        jnp.asarray, load_checkpoint(os.path.join(base, "gate3e_params.pkl"))["params"])
+        jnp.asarray, load_checkpoint(args.z128_ckpt or os.path.join(base, "gate3e_params.pkl"))["params"])
 
     rows = []
     n = 0
@@ -132,7 +137,7 @@ def main():
         pass_z128_T5=sum(r["z128_T5"]["passed"] for r in rows),
         seconds=round(time.time() - t0, 1),
     )
-    with open(os.path.join(base, "paired_eval.json"), "w") as fo:
+    with open(os.path.join(base, args.out), "w") as fo:
         json.dump(out, fo, indent=2)
     print({k: v for k, v in out.items() if k != "rows"})
     # pre-registered verdict rule (log/2026-07-10-paired-eval.md)
