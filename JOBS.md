@@ -1,17 +1,18 @@
 # JOBS.md — SLURM state + handoff (phase 1, toy)
 
-Updated 2026-07-10 (rulings executed). **One job in flight: 15640033 =
-gate (iii) at 128 targets** (log/2026-07-10-toy-gate3e.md; T-mix contexts
-[1,1,2,2,5,5], dual (K,T) eval columns, funnels K=512, P-sharp bar: median
-SW2/bespoke <= 31 vs 62 at 10 targets). ~2-2.5h on a full H100.
-Harvest: results/gate3e.json — verdict line carries GATE3-PASS/FAIL AND
-P-SHARP-PASS/FAIL separately. On GATE3-PASS: patch eval_full.py with
-funnel-K=512 + (K,T) columns, then the gate-(iv) chain (recipe below now
-needs --aux + T-mix datagen updates before submission — gen_zoo_data.py
-predates Ruling 1). On P-sharp FAIL: architecture finding -> bar conversation
-at reconvene WITH evidence, as ruled.
-Story figure: results/gate3_story.png (coverage law, T-vs-K, sharpness gap,
-shortK lever).
+Updated 2026-07-10 (gate3e harvested). **No jobs in flight.**
+Gate3e (128 targets): GATE3-FAIL 1/24, P-SHARP-FAIL under every cut
+(registered 487.9 vs bar 31; like-for-like T=1/same-cells 93->288) — BUT
+heterogeneous: T=1 pass-rate ROSE (4/24 vs 1/10) with best-ever rows
+(gmm-d8 SW2 0.036 @ ESS 28%; gmm-d2 ESS 94%) next to new catastrophic ones.
+Two confounds survive: unpaired theta draws; compute-per-pair shrank 10x.
+NEXT (pre-registered, log/2026-07-10-toy-gate3e.md): PAIRED EVAL of both
+checkpoints (results/gate3_noshortk_params.pkl 37-dim tokens via
+--legacy-tokens; results/gate3e_params.pkl 41-dim + aux) on ONE common
+24-target set, both (K,T) columns, shared bespoke refs (~25 min, eval-only).
+Then the Ruling-2 bar conversation with paired evidence; if compute-scaling
+is implicated: 128 targets x 2M steps via the resumable 3h chain.
+Story figure: results/gate3_story.png. Budget ~13/480 H100-hours.
 
 ## Gap inventory after the P1-mirror measurement (results/gate3_p1.json)
 - warp-d2 PASSES (first certified target); ESS clause solved on 6/10 rows.
