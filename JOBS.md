@@ -4,12 +4,14 @@ Updated 2026-07-10 (GATE (iv) LAUNCHED, authorized by
 log/2026-07-10-reconvene-paired.md; pre-registration + full job table in
 log/2026-07-10-toy-gate4.md). **21 jobs queued/running:**
 datagen 15651223 (train4) / 15651225 (train2) / 15651226 (eval);
-arm chains train4 15651227-29, train2 15651230-32, train4ng 15651233-35
+arm chains train4 15651227-29, train2 15651230-32, train4ng 15652690-92
+(original 15651233-35 fast-failed on a read-only-npz bug in the nograd
+path, fixed + resubmitted — see gate4 log)
 (1.6M steps each = gate3e's 260 steps/pair held fixed at 6144 pairs);
-per-arm post: evals 15651236-38 -> results/eval_<arm>.json (dual (K,T)
-columns, fresh-theta regime), sanity floors 15651239-41 ->
+per-arm post: evals 15651236-37 + 15652693 -> results/eval_<arm>.json (dual (K,T)
+columns, fresh-theta regime), sanity floors 15651239-40 + 15652694 ->
 results/sanity_<arm>.json (trained-target regime, floor >= 6/24 & med ESS
->= 1%), paired instruments 15651242-44 -> results/paired_<arm>.json
+>= 1%), paired instruments 15651242-43 + 15652695 -> results/paired_<arm>.json
 (P-scale: median(gate3e)/median(arm) > 1 on T=1).
 
 ## Harvest (in order; keep regimes SEPARATED in every report)
