@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --account=rrg-lplevass
-#SBATCH --gpus-per-node=h100_20gb
-#SBATCH --time=01:30:00
+#SBATCH --gpus-per-node=1
+#SBATCH --time=02:59:00
 #SBATCH --mem=32G
 #SBATCH --cpus-per-task=4
 #SBATCH -o jobout/gate3_%j.out
