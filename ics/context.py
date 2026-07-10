@@ -9,9 +9,15 @@ the honest readout model); a 3-candidate step-size probe so one protocol
 serves all zoo scales; energy/gradient features normalized by their context
 spread with the log-scales appended as global token features.
 
-Token layout (TOKEN_DIM = 2*DMAX + 4):
+Token layout (TOKEN_DIM = 2*DMAX + 5):
   [ x_white (DMAX, zero-padded) | (E - mean E)/sd(E) |
-    sigma*gradE / sd (DMAX, zero-padded) | log sd(E) | log sd(grad) | d/DMAX ]
+    sigma*gradE / sd (DMAX, zero-padded) | log sd(E) | log sd(grad) | d/DMAX |
+    summary-flag ]
+With aux_tokens=True (reconvene addition 2: hybrid learned scale correction),
+4 summary tokens (one per chain, flag=1) are appended carrying per-chain
+whitened mean (x-slot), per-chain whitened std (grad-slot), and per-chain
+energy range / sd(E) (E-slot) — the encoder can learn scale corrections the
+hand-crafted whitening misses.
 """
 
 from functools import partial
@@ -24,7 +30,7 @@ import jax.random as jr
 
 from .zoo import DMAX, logpdf
 
-TOKEN_DIM = 2 * DMAX + 4
+TOKEN_DIM = 2 * DMAX + 5  # last dim: summary-token flag (0 = chain point)
 N_CHAINS = 4
 INIT_SCALE = 5.0
 STEP_CANDIDATES = (0.5, 0.15, 0.05)
@@ -102,7 +108,7 @@ def _mala_target(target, key, n_steps, step, temperature):
     return xs, accs.mean()
 
 
-def generate_context_for_target(key, target, K, temperature=1.0):
+def generate_context_for_target(key, target, K, temperature=1.0, aux_tokens=False):
     """Zoo-scale context generation: jit-cached per (family, d, K)."""
     assert K % N_CHAINS == 0
     k_probe, k_run = jr.split(key)
@@ -116,10 +122,11 @@ def generate_context_for_target(key, target, K, temperature=1.0):
     energy = -logpdf(target, x_raw)
     ld_single = lambda xi: logpdf(target, xi[None, :])[0]
     grad_e = -jax.vmap(jax.grad(ld_single))(x_raw)
-    return _build_context(x_raw, energy, grad_e, accept, step, target.d)
+    return _build_context(x_raw, energy, grad_e, accept, step, target.d, aux_tokens)
 
 
-def generate_context(key, logpdf_fn, d, K, n_chains=N_CHAINS, temperature=1.0):
+def generate_context(key, logpdf_fn, d, K, n_chains=N_CHAINS, temperature=1.0,
+                     aux_tokens=False):
     assert n_chains == N_CHAINS, "frozen protocol: 4 chains"
     assert K % N_CHAINS == 0
     n_steps = K // N_CHAINS
@@ -138,10 +145,10 @@ def generate_context(key, logpdf_fn, d, K, n_chains=N_CHAINS, temperature=1.0):
 
     energy = -logpdf_fn(x_raw)
     grad_e = -jax.vmap(jax.grad(ld_single))(x_raw)
-    return _build_context(x_raw, energy, grad_e, accept, step, d)
+    return _build_context(x_raw, energy, grad_e, accept, step, d, aux_tokens)
 
 
-def _build_context(x_raw, energy, grad_e, accept, step, d):
+def _build_context(x_raw, energy, grad_e, accept, step, d, aux_tokens=False):
     mu = x_raw.mean(axis=0)
     sigma = x_raw.std(axis=0) + 1e-6
     x_white = whiten_apply(x_raw, mu, sigma)
@@ -159,7 +166,22 @@ def _build_context(x_raw, energy, grad_e, accept, step, d):
     const = jnp.tile(
         jnp.array([jnp.log(e_scale), jnp.log(g_scale), d / DMAX])[None, :], (K_, 1)
     )
-    tokens = jnp.concatenate([pad(x_white), e_tok[:, None], pad(g_tok), const], axis=1)
+    flag = jnp.zeros((K_, 1))
+    tokens = jnp.concatenate(
+        [pad(x_white), e_tok[:, None], pad(g_tok), const, flag], axis=1)
+    if aux_tokens:
+        S = K_ // N_CHAINS
+        xc = x_white.reshape(N_CHAINS, S, d)
+        ec = energy.reshape(N_CHAINS, S)
+        pad4 = lambda a: jnp.concatenate(
+            [a, jnp.zeros((a.shape[0], DMAX - d), dtype=a.dtype)], axis=1)
+        sum_x = pad4(xc.mean(axis=1))                     # (4, DMAX)
+        sum_g = pad4(xc.std(axis=1))                      # per-chain whitened std
+        sum_e = ((ec.max(axis=1) - ec.min(axis=1)) / e_scale)[:, None]
+        sum_const = jnp.tile(const[:1], (N_CHAINS, 1))
+        sum_flag = jnp.ones((N_CHAINS, 1))
+        summary = jnp.concatenate([sum_x, sum_e, sum_g, sum_const, sum_flag], axis=1)
+        tokens = jnp.concatenate([tokens, summary], axis=0)
     return Context(x_raw=x_raw, energy=energy, grad=grad_e, mu=mu, sigma=sigma,
                    tokens=tokens, accept=accept, step=jnp.asarray(step))
 

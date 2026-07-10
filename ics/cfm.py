@@ -12,14 +12,14 @@ from jax_flows import ot_interpolate
 from .zoo import DMAX
 
 
-def cond_cfm_loss(params, model, x1, tokens, key):
+def cond_cfm_loss(params, model, x1, tokens, key, mask=None):
     """L = E || v(x_t, t, tokens) - (x1 - x0) ||^2, per-row contexts."""
     kt, kn = jr.split(key)
     b = x1.shape[0]
     t = jr.uniform(kt, (b,), dtype=x1.dtype)
     x0 = jr.normal(kn, x1.shape, dtype=x1.dtype)
     x_t = ot_interpolate(x0, x1, t)
-    v = model.apply({"params": params}, x_t, t, tokens)
+    v = model.apply({"params": params}, x_t, t, tokens, mask)
     return jnp.mean((v - (x1 - x0)) ** 2)
 
 

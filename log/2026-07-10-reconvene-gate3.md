@@ -51,3 +51,19 @@ the more overdispersed arm (stage-0 asymmetry).
   beat A on funnels; the x3 arms don't hurt the gmm/warp controls (stage-0:
   overdispersion is cheap); a clear worst-case winner emerges.
 - submitted: job ID 15612008
+
+## Whitening study RESULT (job 15612008, results/whitening_study.json)
+Pre-registered expectation REFUTED, decisively and usefully:
+- Status-quo context-std whitening is adequate UNCONDITIONALLY: funnel rows
+  reach ESS 70-96%, |logZ| <= 0.04, worst-case sw2/floor 2.85 across the
+  whole testbed. The "10x scale underestimate" mechanism I proposed after
+  attempt 2 does NOT explain the gate-3 funnel failure — the failure lives
+  in the CONDITIONAL pathway (shared model + encoder), not in the scale.
+- The err-wide x3 arms HURT (worst-case 6.4 and 34.3): inflating the
+  WHITENING scale compresses the target in whitened space and makes the FM
+  task harder. Stage-0's "err wide" applies to proposal dispersion relative
+  to the target, not to input standardization. Reconvene addition 1 tested
+  as ordered and empirically rejected for this use.
+- Decision per pre-registered rule: KEEP sigma_std. Attempt "3a"
+  (whitening-only) is therefore vacuous; the single substantive change for
+  attempt 3 is the ENCODER arm.

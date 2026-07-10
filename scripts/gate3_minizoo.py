@@ -12,6 +12,7 @@ SW2^2 <= max(3x same-p floor, 0.1), on fresh contexts. Attempt 2: 200k steps.
 Writes results/gate3.json + results/gate3_params.pkl.
 """
 
+import argparse
 import json
 import os
 import sys
@@ -61,19 +62,27 @@ def eval_on(model, params, target, ctx, seed):
 
 
 def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--attn", action="store_true", help="2 self-attention blocks")
+    ap.add_argument("--aux", action="store_true", help="chain-summary tokens")
+    ap.add_argument("--shortk", action="store_true", help="short-context augmentation")
+    args = ap.parse_args()
     t0 = time.time()
-    print("building dataset...", flush=True)
-    targets, ctxs, data = build_zoo_dataset(jr.key(31), SPECS, N_CTX, K, N_POOL)
+    print(f"building dataset... (attn={args.attn} aux={args.aux} shortk={args.shortk})",
+          flush=True)
+    targets, ctxs, data = build_zoo_dataset(jr.key(31), SPECS, N_CTX, K, N_POOL,
+                                            aux_tokens=args.aux)
     print(f"dataset built in {time.time()-t0:.0f}s", flush=True)
 
-    model = ICSModel()
+    model = ICSModel(n_attn=2 if args.attn else 0)
     params = model.init(
         jr.key(32), jnp.ones((2, DMAX), jnp.float32), jnp.ones((2,), jnp.float32),
         data.tokens[:2, 0],
     )["params"]
     tx = optax.adam(optax.cosine_decay_schedule(LR, STEPS))
     opt_state = tx.init(params)
-    step = make_train_step(model, tx, BATCH, len(SPECS), N_CTX, N_POOL)
+    step = make_train_step(model, tx, BATCH, len(SPECS), N_CTX, N_POOL,
+                           shortk=args.shortk, K=K, n_aux=4 if args.aux else 0)
 
     keys = jr.split(jr.key(33), STEPS)
     for i in range(STEPS):
@@ -86,7 +95,8 @@ def main():
     n_pass = 0
     for j, ((family, d), t) in enumerate(zip(SPECS, targets)):
         fn = lambda x, _t=t: logpdf(_t, x)
-        fresh_ctx = generate_context(jr.key(9000 + j), fn, d, K=K)
+        fresh_ctx = generate_context(jr.key(9000 + j), fn, d, K=K,
+                                     aux_tokens=args.aux)
         r = eval_on(model, params, t, fresh_ctx, 10_000 + 10 * j)
         r.update(family=family, d=d)
         n_pass += r["passed"]
@@ -97,7 +107,8 @@ def main():
     for j, (family, d) in enumerate([("gmm", 4), ("funnel", 4)]):
         t = sample_target(jr.key(7000 + j), family, d)
         fn = lambda x, _t=t: logpdf(_t, x)
-        fresh_ctx = generate_context(jr.key(7100 + j), fn, d, K=K)
+        fresh_ctx = generate_context(jr.key(7100 + j), fn, d, K=K,
+                                     aux_tokens=args.aux)
         r = eval_on(model, params, t, fresh_ctx, 7200 + 10 * j)
         r.update(family=family, d=d)
         out["heldout_theta_probes"].append(r)

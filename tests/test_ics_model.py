@@ -87,3 +87,30 @@ def test_cnf_logpdf_matches_analytic_gaussian():
         2 * jnp.pi * S**2
     )
     np.testing.assert_allclose(np.asarray(lq), np.asarray(lp), rtol=1e-3, atol=2e-3)
+
+
+def test_attention_encoder_permutation_invariance_and_mask():
+    enc = ContextEncoder(enc_dim=32, hidden=64, n_attn=2)
+    tokens = jr.normal(jr.key(30), (2, 16, TOKEN_DIM))
+    params = enc.init(jr.key(31), tokens)["params"]
+    out1 = enc.apply({"params": params}, tokens)
+    perm = jr.permutation(jr.key(32), 16)
+    out2 = enc.apply({"params": params}, tokens[:, perm, :])
+    np.testing.assert_allclose(np.asarray(out1), np.asarray(out2), rtol=2e-4, atol=1e-5)
+    # masking out tokens must equal dropping them
+    mask = jnp.ones((2, 16)).at[:, 10:].set(0.0)
+    out_masked = enc.apply({"params": params}, tokens, mask)
+    out_dropped = enc.apply({"params": params}, tokens[:, :10, :])
+    np.testing.assert_allclose(np.asarray(out_masked), np.asarray(out_dropped),
+                               rtol=2e-4, atol=1e-5)
+
+
+def test_aux_summary_tokens():
+    from ics.context import generate_context_for_target
+    from ics.zoo import sample_target
+
+    t = sample_target(jr.key(33), "gmm", 4)
+    c = generate_context_for_target(jr.key(34), t, K=64, aux_tokens=True)
+    assert c.tokens.shape == (68, TOKEN_DIM)  # 64 chain points + 4 summaries
+    flags = np.asarray(c.tokens[:, -1])
+    assert flags[:64].max() == 0.0 and flags[64:].min() == 1.0

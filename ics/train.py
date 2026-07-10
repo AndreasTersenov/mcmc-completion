@@ -29,7 +29,7 @@ class ZooData(NamedTuple):
     d: jnp.ndarray        # (T,) int32
 
 
-def build_zoo_dataset(key, specs, n_ctx, K, n_pool, temperature=1.0):
+def build_zoo_dataset(key, specs, n_ctx, K, n_pool, temperature=1.0, aux_tokens=False):
     """specs: list of (family, d) or (family, d, seed_offset). Returns
     (targets list, contexts list-of-lists, ZooData)."""
     targets, ctxs = [], []
@@ -40,7 +40,8 @@ def build_zoo_dataset(key, specs, n_ctx, K, n_pool, temperature=1.0):
         kt, kc, kp = jr.split(jr.fold_in(key, 1000 * i + off), 3)
         t = sample_target(kt, family, d)
         targets.append(t)
-        cs = [generate_context_for_target(k, t, K=K, temperature=temperature)
+        cs = [generate_context_for_target(k, t, K=K, temperature=temperature,
+                                          aux_tokens=aux_tokens)
               for k in jr.split(kc, n_ctx)]
         ctxs.append(cs)
         tok.append(np.stack([np.asarray(c.tokens, np.float32) for c in cs]))
@@ -67,8 +68,15 @@ def build_zoo_dataset(key, specs, n_ctx, K, n_pool, temperature=1.0):
     return targets, ctxs, data
 
 
-def make_train_step(model, tx, batch, n_targets, n_ctx, n_pool):
+def make_train_step(model, tx, batch, n_targets, n_ctx, n_pool,
+                    shortk=False, K=128, n_aux=0):
+    """shortk: per-row random effective context length k in {8,32,K} emulated
+    by masking chain steps >= k/4 (chain-major token layout; aux summary
+    tokens always kept). CAVEAT (logged): whitening/e_scale stay those of the
+    full context — the mode-coverage pattern is what the augmentation
+    teaches, not scale-stat realism."""
     from .cfm import cond_cfm_loss
+    from .context import N_CHAINS
 
     @jax.jit
     def step(params, opt_state, key, data):
@@ -81,8 +89,20 @@ def make_train_step(model, tx, batch, n_targets, n_ctx, n_pool):
         mask = data.dim_mask[ti]
         noise = jr.normal(kn, x_raw.shape, dtype=x_raw.dtype)
         x1 = jnp.where(mask > 0, (x_raw - mu) / sg, noise)
-        toks = data.tokens[ti, ci]                     # (B, K, F)
-        loss, grads = jax.value_and_grad(cond_cfm_loss)(params, model, x1, toks, kl)
+        toks = data.tokens[ti, ci]                     # (B, K(+aux), F)
+        mask = None
+        if shortk:
+            km = jr.split(kl)[0]
+            kchoice = jnp.array([8, 32, K])[jr.randint(km, (batch,), 0, 3)]
+            steps_per_chain = K // N_CHAINS
+            step_idx = jnp.arange(K) % steps_per_chain
+            keep = step_idx[None, :] < (kchoice[:, None] // N_CHAINS)
+            if n_aux > 0:
+                keep = jnp.concatenate(
+                    [keep, jnp.ones((batch, n_aux), bool)], axis=1)
+            mask = keep.astype(toks.dtype)
+        loss, grads = jax.value_and_grad(cond_cfm_loss)(
+            params, model, x1, toks, kl, mask)
         import optax
         updates, opt_state = tx.update(grads, opt_state)
         return optax.apply_updates(params, updates), opt_state, loss
