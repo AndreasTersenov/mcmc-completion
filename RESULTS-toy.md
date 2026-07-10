@@ -1,8 +1,5 @@
 # RESULTS-toy — phase 1, the in-context sampler (2026-07-10)
 
-**DRAFT — baselines job in flight; P1-SW2 clause, P3 anchor sensitivity, and
-P7 finalize on its harvest. Everything else below is adjudicated.**
-
 Audience: the reconvene. Assumes PLAN.md, not the code. Every number passed
 the repo's gates; every run was pre-registered before submission; regimes
 are separated throughout: **trained-target** (the model on targets it
@@ -28,13 +25,13 @@ pre-registered follow-up (longer/larger arms) is staged.
 
 | Prediction (registered confidence) | Verdict | Numbers |
 |---|---|---|
-| **P1** (75%): in-family fresh-θ, K=128+grads, d≤8: ESS ≥ 1% on ≥80% + SW2 within 2× bespoke | **NOT MET** (ESS clause) | 39.6% of 144 targets clear the ESS clause (both columns); SW2 clause vs baseline-2 pending but cannot raise the fraction |
+| **P1** (75%): in-family fresh-θ, K=128+grads, d≤8: ESS ≥ 1% on ≥80% + SW2 within 2× bespoke | **NOT MET** (both clauses, final) | ESS clause: 39.6% of 144 (bar 80%). SW2 clause: 0/8 subset targets within 2× of even the under-trained B2 (a-fortiori vs full-strength; deviation documented) |
 | **P2** (70%): zero-shot cross-family largely fails at mode level (≥50%) on the 2-family arm | **CONFIRMED at the boundary** | 55.4% (T=5 scoring column) / 49.4% (T=1) — column-dependence stated plainly |
 | **P3** (65%): certificate flags ≥90% of bad cross-family targets; false-blessing <10% excl. mode-drop | **FAILED — new blind spot found** | 69% flagged; 24% non-mode-drop false blessings (robust to the "bad" cut): smoothly overspread mass keeps ESS ≥1% while SW2 is bad |
 | **P11** (60%): gradient tokens help cross-family more than in-family | **CONFIRMED** (ordering) | grad/nograd median-ESS ratio: in-family 0.97×/1.04×, held-out 1.37×/1.18× (T1/T5) |
 | **P12** (55%): held-out performance improves with 2→4 train families at fixed compute | **CONFIRMED** (composite + both SW2 columns; one flat ESS cell) | held-out ESS-clause 31.1% vs 27.0% (t5); median SW2 7.9 vs 11.4 (t1), 10.4 vs 16.1 (t5); paired mechanism: 1.86× on cross-cells |
 | **P-scale** (70%, registered mid-phase): paired medians improve 128→1024 | **PASS** | 1.62× (T=1), 1.48× (T=5), 17/24 |
-| **P7** (70%): MCLMC wins single targets; ICS wins many-target regime | pending baselines harvest | B4 = MCLMC at ICS-matched wall-clock, in flight |
+| **P7** (70%): MCLMC wins single targets; ICS wins many-target regime | **half-confirmed** | MCLMC wins 9/12 at matched sampling wall-clock (first half ✓); ICS is ~5× cheaper per new target (4.3 s all-in w/ certificate vs 18.7 s adaptation alone) but crossover count (cheaper AND better) = 3/12 — many-target claim not demonstrated at toy quality |
 | P-sharp (70%, superseded) | registered MISS, asterisked | population/θ artifact; reversed by the paired instrument (reconvene-accepted) |
 
 **K-T1 (kill): does NOT fire.** The ESS-clause shortfall is a level, not a
@@ -100,11 +97,20 @@ in the shear warp; 23 rows excluded by the audit; zoo-design fix required.)
    arm spread <7×). Registration lesson: anchor floors to measured
    reference quantiles.
 
-## Baselines (finalizing)
+## Baselines (all four, as frozen — no cherry-picking)
 
-B1 (untrained floor) and B2–B4 (bespoke-10-min / energy-MLP+MALA / MCLMC at
-ICS-matched wall-clock) on the pre-registered 12-target subset: jobs in
-flight; table + P1-SW2 clause + P3 anchor sensitivity + P7 land here.
+12-target pre-registered subset (each family × d∈{2,4}); medians / notes:
+
+| Baseline | SW2² (median) | vs ICS (t5) | Notes |
+|---|---|---|---|
+| B1 untrained head | 25–41 (full set) | ~6× worse | floor well-separated; P1-clause 0.0% |
+| B2 bespoke per-target FM | **0.006** | ~300× better | ESS 99%+; run at ~70 s/target — a LOWER bound on the frozen 10-min spec (deviation documented; verdicts one-sided-safe) |
+| B3 energy-fit + MALA | 19 | worse on 9/12 | catastrophic on heavy tails (funnelmix-d4 SW2 1.9·10⁵); the citable ablation is not competitive |
+| B4 MCLMC (matched sampling wall-clock) | 1.7 | better on 9/12 | but: 18.7 s median adaptation per NEW target, no certificate, mode-drops (gmm-d2 recovery 0.43) |
+
+The gap to B2 (~300× in SW2) is the honest size of the conditional-sharpness
+problem at toy scale; the paired instrument says it shrinks with zoo size at
+measured rate ~1.6× per 8× targets.
 
 ## Honest limits
 
