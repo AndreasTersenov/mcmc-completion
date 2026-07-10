@@ -45,7 +45,7 @@ def main():
     raw = np.load(os.path.join(args.data, "data.npz"))
     data = ZooData(**{k: jnp.asarray(raw[k]) for k in ZooData._fields})
     if args.nograd:
-        toks = np.asarray(data.tokens)
+        toks = np.array(data.tokens)  # copy: npz-loaded arrays are read-only
         toks[..., DMAX + 1 : 2 * DMAX + 1] = 0.0  # grad block
         toks[..., 2 * DMAX + 2] = 0.0             # log g_scale feature
         data = data._replace(tokens=jnp.asarray(toks))

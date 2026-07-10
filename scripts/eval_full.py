@@ -64,7 +64,7 @@ def main():
             ctx = Context(**{k: jnp.asarray(v) for k, v in
                              row[f"context_{tag}"]._asdict().items()})
             if args.nograd:
-                toks = np.asarray(ctx.tokens)
+                toks = np.array(ctx.tokens)  # copy: read-only source
                 toks[..., DMAX + 1 : 2 * DMAX + 1] = 0.0
                 toks[..., 2 * DMAX + 2] = 0.0
                 ctx = ctx._replace(tokens=jnp.asarray(toks))

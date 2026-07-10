@@ -45,7 +45,7 @@ for n, (j, f, d, t) in enumerate(picked):
     ctx = generate_context_for_target(jr.fold_in(jr.key(717171), j), t, K=k_eval,
                                       temperature=5.0, aux_tokens=True)
     if args.nograd:
-        toks = np.asarray(ctx.tokens)
+        toks = np.array(ctx.tokens)  # copy: read-only source
         toks[..., DMAX + 1: 2 * DMAX + 1] = 0.0
         toks[..., 2 * DMAX + 2] = 0.0
         ctx = ctx._replace(tokens=jnp.asarray(toks))
