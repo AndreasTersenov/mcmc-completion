@@ -10,7 +10,7 @@ of the number). Full run-by-run narrative: `log/2026-07-09-{gates,m1-envelope,m2
 
 | Item | Pre-registered | Outcome |
 |---|---|---|
-| **K-M1** (kill) | fires if no achievable mismatch gives ESS/N > 0.1% at d=8 | **Does not fire.** The 0.1% frontier at d=8 sits at per-dim shift ε\*=0.93 (per-dim KL ≈ 0.43) — far looser than per-target-trained neural samplers achieve (literature flows: ESS 10–90% at d ≈ 8–64; *from memory, needs proper citation at reconvene*). |
+| **K-M1** (kill) | fires if no achievable mismatch gives ESS/N > 0.1% at d=8 | **Does not fire.** The 0.1% frontier at d=8 sits at per-dim shift ε\*=0.93 (per-dim KL ≈ 0.43) — far looser than per-target-trained neural samplers achieve (FAB/CRAFT: ESS ≈ 88% at d=32, ≈ 93% at d=60 ⇒ D₂ ≈ 0.1–0.5; **now cited — see Caveats §K-M1 citation correction, DRAFT**). |
 | **P8a** (85%) | ESS decays ~exp in d at fixed per-dim mismatch; d=16 needs mismatch shrinking with d | **Confirmed, and exact, not approximate**: ESS/N = exp(−D₂(p‖q)) (Rényi-2) on every in-family row measured; iso-ESS frontier ε\*(d) = √(ln(1/target)/d) ∝ 1/√d. |
 | **P8b** (75%) | in-family θ collapses at K = O(θ-dim) with exact (E,∇E); mismatch → confident wrong θ; true-energy SNIS catches it | **Confirmed both halves**, with two refinements: identifiability can be parameter-anisotropic in-family (funnel σᵥ), and "catches it" operationally requires the N-doubling check, not a single ESS reading (see M2 §mismatch). |
 | **P-grad** (60%) | gradients cut K needed for contraction ≥2× in d ≥ 8 | **Confirmed at d=8, θ-dim 8**: K ratio ≥ 4 (gradients: contraction already at K=8; energy-only: K ∈ (32,128]). At fixed K=8: 13× tighter posterior, 200× smaller θ-error. |
@@ -84,10 +84,10 @@ with bias switching on below ESS/N ≈ 1% (at N=10⁴: bias −0.07 at cf-ESS
 
 **K-M1 status: does not fire.** At d=8 even the 0.1% frontier allows per-dim
 shift 0.93σ / variance ratio in [0.52, 9.7]. Judged against per-target-trained
-neural samplers (which reach D₂ ≲ 2 on smooth d ≈ 8–64 targets — from-memory
-literature values, flagged for proper citation), the frontier is loose. The
-honest counterweight: the frontier is loose in *distance* but strict in
-*structure* (points 3–5).
+neural samplers (FAB/CRAFT reach D₂ ≈ 0.1–0.5 at d = 32–60, i.e. ESS 88–93% —
+now cited, see Caveats §K-M1 citation correction, DRAFT), the frontier is loose
+by a factor ~14–90 in the D₂ budget. The honest counterweight: the frontier is
+loose in *distance* but strict in *structure* (points 3–5).
 
 ---
 
@@ -191,8 +191,10 @@ stands: a q that cleanly misses mass is invisible to any of this.
 
 ## Caveats & honest limits
 
-- The K-M1 judge criterion references literature ESS values quoted here from
-  memory; pin citations at reconvene before treating K-M1 as formally closed.
+- The K-M1 judge criterion originally referenced literature ESS values quoted
+  from memory. **Now pinned to primary sources — see §K-M1 citation correction
+  below (appended 2026-07-10, DRAFT).** The verdict is unchanged (K-M1 does not
+  fire — if anything reinforced); the phrasing is narrowed.
 - Finite stability checks can pass infinite-variance cases (funnel-vs-Gaussian
   at d=2 read a stable 4.9%). Structural tail-domination arguments must
   supplement empirical gates.
@@ -204,6 +206,77 @@ stands: a q that cleanly misses mass is invisible to any of this.
   to it; absolute floor values are not.
 - P-grad's K-ratio is a lower bound (≥4×): K < 8 was not in the frozen grid.
 - d > 64, discrete targets, adaptive probing: out of scope by design.
+
+## K-M1 citation correction (appended 2026-07-10 — DRAFT, verify camera-ready at reconvene)
+
+The K-M1 verdict compared the certificate's distance-frontier to per-target
+neural-sampler performance using ESS values quoted **from memory**. Those are now
+pinned to primary sources. **The verdict is unchanged — K-M1 does not fire, if
+anything reinforced; only the phrasing is narrowed and corrected.**
+
+**Cleanest anchor — FAB** (Midgley et al., ICLR 2023, arXiv:2208.01893). FAB trains
+a normalizing flow by minimizing the mass-covering **α-divergence with α = 2 — i.e.
+importance-weight variance**, exactly the quantity our envelope identifies as D₂
+(Rényi-2). Its reported ESS is the reweighted self-normalized-IS ESS of flow samples
+against the true target — **the same object as our ESS/N = exp(−D₂(p‖q))**. So FAB is
+directly commensurable with our certificate, unlike most of the lineage.
+
+| Sampler | Target | d | Reported ESS | ⇒ D₂ = −ln(ESS/N) | Source |
+|---|---|---|---|---|---|
+| FAB (w/ buffer) | 40-mode GMM | 2 | 61.9 ± 8.0% | ≈ 0.48 | 2208.01893, Table 1 |
+| FAB (w/ buffer) | Many-Well (16× double-well) | 32 | 87.8 ± 1.9% | ≈ 0.13 | 2208.01893, Table 5 |
+| CRAFT (as reported in FAB) | Many-Well | 32 | 88.9 ± 0.3% | ≈ 0.12 | 2208.01893, Table 5 |
+| FAB (w/ buffer) | alanine dipeptide | 60 | 92.8 ± 0.1% | ≈ 0.075 | 2208.01893, Table 2 |
+| FAB (w/o buffer) | alanine dipeptide | 60 | 52.2 ± 1.3% | ≈ 0.65 | 2208.01893, Table 2 |
+
+**Reading:** at d = 32–60 the best per-target flows sit at **D₂ ≈ 0.08–0.5**, a factor
+**~14–90 inside** the D₂ < 6.9 budget the 0.1% certificate frontier permits (< 4.6 for
+1%). The frontier is loose *in distance*, now with citations. The
+structural-strictness counterweight (§M1 points 3–5) is untouched.
+
+**Three corrections to the original from-memory phrasing:**
+
+1. **The ESS band is FAB/CRAFT-specific, not "neural samplers" broadly.** The flagship
+   dimension-spanning sampler **iDEM** (Akhound-Sadegh et al., ICML 2024,
+   arXiv:2402.06121; DW-4 d=8, LJ-13 d=39, LJ-55 d=165) **reports NO ESS** — only NLL,
+   total variation, and 2-Wasserstein (e.g. DW-4 𝒲₂ = 2.15, LJ-13 𝒲₂ = 4.35). Path
+   Integral Sampler (2111.15141) and Denoising Diffusion Sampler (2302.13834) report
+   **log-Ẑ, not ESS**. The literature does not uniformly report ESS — that metric
+   heterogeneity is itself the Cornell position paper's point (evaluation without
+   ground truth is unsettled).
+2. **The targets are multimodal / particle systems, not "smooth."** Many-Well is a
+   product of 16 double-wells; LJ-n are Lennard-Jones clusters. These are *harder* than
+   the smooth d≈8 targets the original note implied — so "the frontier is loose" is
+   strengthened, not weakened.
+3. **Commensurability caveat.** Only FAB's ESS maps cleanly onto ESS/N = exp(−D₂)
+   (shared α=2 objective + reweighted-IS definition). The D₂ column is *our* translation
+   via the stage-0 identity; the papers report ESS, and iDEM/PIS/DDS do not report the
+   comparable ESS at all. Do not read the D₂ column as quoted from the papers.
+
+**Verify-at-reconvene (this note is DRAFT):** the FAB GMM-d2 = 61.9% and all table-cell
+values were harvested from ar5iv HTML renders, not the camera-ready PDF (OpenReview
+XCTVFJwS9LJ); the FAB predecessor "Bootstrap Your Flow" (2111.11510) reported 70.1% for
+the GMM, so eyeball that one. CRAFT d=32 is FAB's *reproduction* of CRAFT, not the
+original CRAFT paper. NB: FAB's canonical ID is **2208.01893** (ICLR 2023), *not*
+2111.11510 (the 2021 predecessor). Companion deep-reads of the two conditioning-method
+anchor papers (arXiv:2406.12785 in-context energy functions → baseline-3; arXiv:2205.09735
+foundation posteriors → K1/K2 prior art) drafted same day under
+`~/claude-notes/papers/deep-reads/` (also DRAFT).
+
+```bibtex
+@inproceedings{midgley2023fab,
+  title={Flow Annealed Importance Sampling Bootstrap},
+  author={Midgley, Laurence Illing and Stimper, Vincent and Simm, Gregor N. C. and Sch{\"o}lkopf, Bernhard and Hern{\'a}ndez-Lobato, Jos{\'e} Miguel},
+  booktitle={International Conference on Learning Representations (ICLR)},
+  year={2023}, eprint={2208.01893}, archivePrefix={arXiv}, primaryClass={stat.ML}
+}
+@inproceedings{akhoundsadegh2024idem,
+  title={Iterated Denoising Energy Matching for Sampling from Boltzmann Densities},
+  author={Akhound-Sadegh, Tara and Rector-Brooks, Jarrid and Bose, Avishek Joey and Mittal, Sarthak and Lemos, Pablo and Liu, Cheng-Hao and Sendera, Marcin and Ravanbakhsh, Siamak and Gidel, Gauthier and Bengio, Yoshua and Malkin, Nikolay and Tong, Alexander},
+  booktitle={International Conference on Machine Learning (ICML)},
+  year={2024}, eprint={2402.06121}, archivePrefix={arXiv}, primaryClass={cs.LG}
+}
+```
 
 ## Reproduction
 
