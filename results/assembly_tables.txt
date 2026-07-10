@@ -1,0 +1,50 @@
+=== per-family medians, train4, by column [ESS% | SW2] (fresh theta) ===
+        cell   n |  T1 ESS%  T1 SW2 |  T5 ESS%  T5 SW2 | mrec(T5)
+      gmm-d2  12 |    25.95    1.98 |    21.50    2.61 | 0.82
+      gmm-d4  12 |     1.53    2.20 |     0.57    3.56 | 0.79
+      gmm-d8  12 |     0.32    3.92 |     0.14    5.45 | 0.69
+     gmm-d16  12 |     0.06    6.52 |     0.05    5.66 | 0.38
+    dwell-d2  12 |     0.68    1.23 |     1.84    2.37 | 0.88
+    dwell-d4  12 |     0.10    3.42 |     0.20    4.04 | 0.50
+    dwell-d8  12 |     0.05    6.19 |     0.02    4.89 | 0.75
+   dwell-d16  12 |     0.02    6.72 |     0.01    7.23 | 0.62
+   funnel-d2  12 |    11.77    2.15 |     4.83    6.34 |   -
+   funnel-d4  12 |     0.55    4.84 |     0.44   12.67 |   -
+   funnel-d8  12 |     0.11   12.10 |     0.09   19.68 |   -
+  funnel-d16  12 |     0.03   11.85 |     0.03   11.86 |   -
+     warp-d2  12 |    83.36    0.05 |    85.19    0.07 |   -
+     warp-d4  12 |    11.24    0.46 |    13.65    0.99 |   -
+     warp-d8  12 |     0.13    2.33 |     0.32    1.61 |   -
+    warp-d16  12 |     0.03    5.46 |     0.02    5.19 |   -
+   banana-d2  12 |     4.07    3.38 |    12.21    5.25 |   -
+   banana-d4  12 |     0.16   10.81 |     0.05   12.19 |   -
+   banana-d8   2 |     0.01 1530.81 |     0.01 2984.03 |   -
+  banana-d16  12 | EXCLUDED (audit)
+funnelmix-d2  12 |     9.38    3.53 |     8.97    7.78 | 0.83
+funnelmix-d4  12 |     1.21    8.47 |     0.23   10.88 | 1.00
+funnelmix-d8  12 |     0.10    9.15 |     0.12   12.08 | 0.83
+funnelmix-d16  12 |     0.03   13.99 |     0.03   21.74 | 0.67
+
+=== P11: gradient ESS gain (train4 / train4ng), by regime and column ===
+   in-family [t1]: median-ESS ratio grad/nograd = 0.97x
+   in-family [t5]: median-ESS ratio grad/nograd = 1.04x
+    held-out [t1]: median-ESS ratio grad/nograd = 1.37x
+    held-out [t5]: median-ESS ratio grad/nograd = 1.18x
+
+=== P2 recheck (train2, held-out, mode-level fail = ESS<0.1% or unstable) ===
+  [t1]: 49.4% of 77 (bar >=50%)
+  [t5]: 55.4% of 74 (bar >=50%)
+
+=== P12 both metrics (directive 4) ===
+  [t1] median ESS%: train2 0.170 vs train4 0.181
+  [t1] median SW2: train2 11.431 vs train4 7.871
+  [t5] median ESS%: train2 0.103 vs train4 0.177
+  [t5] median SW2: train2 16.087 vs train4 10.431
+  ESS-clause fraction held-out [t5]: train2 27.0% vs train4 31.1%
+
+=== (5) sanity floors as RELATIVE instrument (per ruling) ===
+  train4: trained-target median ESS 0.0006, n_pass 0/24
+  train2: trained-target median ESS 0.0041, n_pass 0/24
+  train4ng: trained-target median ESS 0.0007, n_pass 0/24
+  relative spread across arms < 7x with no outlier arm -> no broken-arm signal;
+  absolute floors retired per ruling (imported from a different compute regime).
