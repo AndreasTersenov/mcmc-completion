@@ -66,6 +66,7 @@ def main():
     ap.add_argument("--attn", action="store_true", help="2 self-attention blocks")
     ap.add_argument("--aux", action="store_true", help="chain-summary tokens")
     ap.add_argument("--shortk", action="store_true", help="short-context augmentation")
+    ap.add_argument("--out", default="gate3.json")
     ap.add_argument("--wide", action="store_true",
                     help="attempt-4 encoder scale: enc_dim 256, hidden 512, 4 attn blocks")
     args = ap.parse_args()
@@ -123,9 +124,9 @@ def main():
     out["passed"] = bool(n_pass >= 8)
     out["seconds"] = round(time.time() - t0, 1)
     base = os.path.join(os.path.dirname(__file__), "..", "results")
-    with open(os.path.join(base, "gate3.json"), "w") as f:
+    with open(os.path.join(base, args.out), "w") as f:
         json.dump(out, f, indent=2)
-    save_checkpoint(os.path.join(base, "gate3_params.pkl"), params, opt_state, STEPS)
+    save_checkpoint(os.path.join(base, args.out.replace(".json", "_params.pkl")), params, opt_state, STEPS)
     print("GATE3-PASS" if out["passed"] else "GATE3-FAIL")
 
 

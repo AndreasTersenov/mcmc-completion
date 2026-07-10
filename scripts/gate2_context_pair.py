@@ -11,6 +11,7 @@ swapped-context control degrades SW2^2 by >= 3x on both pairs.
 Writes results/gate2.json.
 """
 
+import argparse
 import json
 import os
 import sys
@@ -43,10 +44,13 @@ LR = 1e-3
 N_EVAL = 8192
 
 
+AUX = False  # set from args in main()
+
+
 def build_pair(seed_target, seed_ctx, seed_data):
     target = sample_target(jr.key(seed_target), "gmm", D)
     fn = lambda x: logpdf(target, x)
-    ctx = generate_context(jr.key(seed_ctx), fn, D, K=K)
+    ctx = generate_context(jr.key(seed_ctx), fn, D, K=K, aux_tokens=AUX)
     x_raw = sample_x(jr.key(seed_data), target, N_TRAIN)
     x_white = whiten_apply(x_raw, ctx.mu, ctx.sigma)
     x1 = pad_to_dmax(jr.key(seed_data + 1), x_white).astype(jnp.float32)
@@ -54,11 +58,18 @@ def build_pair(seed_target, seed_ctx, seed_data):
 
 
 def main():
+    global AUX
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--attn", type=int, default=0)
+    ap.add_argument("--aux", action="store_true")
+    ap.add_argument("--out", default="gate2.json")
+    args = ap.parse_args()
+    AUX = args.aux
     t0 = time.time()
     pairs = [build_pair(1042, 2042, 3042), build_pair(1142, 2142, 3142)]
     tokens = jnp.stack([p[1].tokens for p in pairs]).astype(jnp.float32)  # (2, K, F)
 
-    model = ICSModel()
+    model = ICSModel(n_attn=args.attn)
     params = model.init(
         jr.key(7),
         jnp.ones((2, 16), jnp.float32),
@@ -122,7 +133,7 @@ def main():
         print(json.dumps(out["pairs"][-1], indent=2), flush=True)
 
     out["passed"] = bool(all_pass)
-    with open(os.path.join(os.path.dirname(__file__), "..", "results", "gate2.json"), "w") as f:
+    with open(os.path.join(os.path.dirname(__file__), "..", "results", args.out), "w") as f:
         json.dump(out, f, indent=2)
     print("GATE2-PASS" if all_pass else "GATE2-FAIL")
 
