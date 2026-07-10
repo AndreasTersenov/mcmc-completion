@@ -34,6 +34,7 @@ from ics.eval import ics_evaluate, mode_recovery
 from ics.models import ICSModel
 from ics.train import build_zoo_dataset, make_train_step, save_checkpoint
 from ics.zoo import DMAX, logpdf, sample_target, sample_x
+from jax_flows import TimeConditionedMLP, cfm_loss, cfm_sample
 from stage0.sliced_w2 import sliced_w2_squared
 
 SPECS = [
@@ -45,6 +46,50 @@ SPECS = [
 N_CTX, K, N_POOL = 8, 128, 50_000
 STEPS, BATCH, LR = 200_000, 512, 1e-3
 N_EVAL = 4096
+
+
+def bespoke_ref_sw2(target, ctx, seed):
+    """Per-target unconditional FM (whitening-study recipe): the gate-scale
+    proxy for frozen baseline-2 in the P1-mirror composite."""
+    d = target.d
+    x_tr = ((sample_x(jr.key(seed), target, 60_000) - ctx.mu) / ctx.sigma
+            ).astype(jnp.float32)
+    m = TimeConditionedMLP(hidden_dims=(256, 256), output_dim=d)
+    p = m.init(jr.key(seed + 1), jnp.ones((1, d), jnp.float32),
+               jnp.ones((1,), jnp.float32))["params"]
+    tx = optax.adam(optax.cosine_decay_schedule(2e-3, 4000))
+    o = tx.init(p)
+
+    @jax.jit
+    def st(p, o, k):
+        kb, kl = jr.split(k)
+        idx = jr.randint(kb, (512,), 0, x_tr.shape[0])
+        loss, gr = jax.value_and_grad(cfm_loss)(p, x_tr[idx], kl, m)
+        up, o = tx.update(gr, o)
+        return optax.apply_updates(p, up), o, loss
+
+    for k in jr.split(jr.key(seed + 2), 4000):
+        p, o, _ = st(p, o, k)
+    p64 = jax.tree_util.tree_map(lambda a: a.astype(jnp.float64), p)
+    s = cfm_sample(m, p64, jr.key(seed + 3), (2 * N_EVAL, d), n_steps=100,
+                   solver="heun")
+    x_gen = np.asarray(ctx.mu + ctx.sigma * s, np.float64)
+    fresh = np.asarray(sample_x(jr.key(seed + 4), target, 2 * N_EVAL), np.float64)
+    return float(sliced_w2_squared(x_gen, fresh, n_proj=128,
+                                   rng=np.random.default_rng(seed)))
+
+
+def eval_on_p1(model, params, target, ctx, seed, ref_sw2):
+    from ics.eval import mode_recovery as _mr
+    cert, x_gen = ics_evaluate(model, params, target, ctx, jr.key(seed),
+                               n_eval=N_EVAL, n_ode=100)
+    fresh = np.asarray(sample_x(jr.key(seed + 1), target, 2 * N_EVAL), np.float64)
+    sw2 = float(sliced_w2_squared(x_gen, fresh, n_proj=128,
+                                  rng=np.random.default_rng(seed)))
+    ok = (cert["ess_frac_2n"] >= 0.01 and cert["stable"]
+          and sw2 <= max(2.0 * ref_sw2, 0.1))
+    return dict(passed=bool(ok), sw2=sw2, sw2_ref=float(ref_sw2),
+                mode_recovery=_mr(target, x_gen), **cert)
 
 
 def eval_on(model, params, target, ctx, seed):
@@ -67,6 +112,9 @@ def main():
     ap.add_argument("--aux", action="store_true", help="chain-summary tokens")
     ap.add_argument("--shortk", action="store_true", help="short-context augmentation")
     ap.add_argument("--out", default="gate3.json")
+    ap.add_argument("--criteria", choices=["legacy", "p1"], default="legacy",
+                    help="p1: pre-registered P1-mirror composite, funnels at K=512"
+                         " (log/2026-07-10-toy-gate3c.md section c)")
     ap.add_argument("--wide", action="store_true",
                     help="attempt-4 encoder scale: enc_dim 256, hidden 512, 4 attn blocks")
     args = ap.parse_args()
@@ -97,13 +145,31 @@ def main():
             print(f"step {i+1}: loss {float(loss):.4f} [{time.time()-t0:.0f}s]",
                   flush=True)
 
-    out = {"gate": "iii", "targets": [], "heldout_theta_probes": []}
+    out = {"gate": "iii", "criteria": args.criteria, "targets": [],
+           "heldout_theta_probes": []}
     n_pass = 0
     for j, ((family, d), t) in enumerate(zip(SPECS, targets)):
         fn = lambda x, _t=t: logpdf(_t, x)
-        fresh_ctx = generate_context(jr.key(9000 + j), fn, d, K=K,
-                                     aux_tokens=args.aux)
-        r = eval_on(model, params, t, fresh_ctx, 10_000 + 10 * j)
+        if args.criteria == "p1":
+            k_eval = 512 if family == "funnel" else K
+            fresh_ctx = generate_context(jr.key(9000 + j), fn, d, K=k_eval,
+                                         aux_tokens=args.aux)
+            ref = bespoke_ref_sw2(t, fresh_ctx, 20_000 + 10 * j)
+            r = eval_on_p1(model, params, t, fresh_ctx, 10_000 + 10 * j, ref)
+            if family == "funnel":
+                # K=128 behavior reported as a CERTIFICATE row (finding 3):
+                # honest refusal on unidentifiable context = success
+                ctx128 = generate_context(jr.key(9500 + j), fn, d, K=K,
+                                          aux_tokens=args.aux)
+                c128, _ = ics_evaluate(model, params, t, ctx128,
+                                       jr.key(11_000 + j), n_eval=2048, n_ode=100)
+                r["k128_ess"] = c128["ess_frac_2n"]
+                r["k128_refusal_correct"] = bool(
+                    c128["ess_frac_2n"] < 0.01 or not c128["stable"])
+        else:
+            fresh_ctx = generate_context(jr.key(9000 + j), fn, d, K=K,
+                                         aux_tokens=args.aux)
+            r = eval_on(model, params, t, fresh_ctx, 10_000 + 10 * j)
         r.update(family=family, d=d)
         n_pass += r["passed"]
         out["targets"].append(r)
