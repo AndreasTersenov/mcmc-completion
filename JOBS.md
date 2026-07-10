@@ -1,12 +1,15 @@
 # JOBS.md — SLURM state + handoff (phase 1, toy)
 
-Updated 2026-07-10 (post-attempt-3 review). **Two jobs in flight (gate3d lever program, log/2026-07-10-toy-gate3d.md):**
-- 15627064 = lever 1a (one-hot d-embedding, 200k, p1) -> gate3_d1.json.
-  Readout: d=2 mode_recovery/logZ vs b1 (0.67/0.50, ln covered mass).
-- 15627065 = lever 2 (400k on b1 recipe, p1) -> gate3_400k.json.
-  Readout: SW2 vs 2x-bespoke bar as the cosine stretches; loss curve.
-Harvest: append readouts to gate3d log; if 1a fixes d=2, next combine
-winners (one run); if SW2 stalls at 400k, lever 3 = head capacity.
+Updated 2026-07-10 (post-attempt-3 review). **Two jobs in flight (gate3d program):**
+- 15633129 = d=2 coverage diagnostic (K=512 eval on b1 ckpt,
+  --legacy-tokens) -> gate3_d2cov.json. If d=2 mode_recovery -> ~1 at K=512:
+  RECLASSIFY d=2 drop as context-coverage/oracle-ceiling (reconvene item);
+  else lever 1b (family balance) fires.
+- 15633130 = lever 3 (head capacity 512^3, 200k, p1) -> gate3_headwide.json.
+  Readout: composite count + SW2 rows vs 2x-bespoke bars.
+DONE this program: lever 1a (one-hot d) REFUTED for d=2; lever 2 (400k)
+EXONERATED length (note: high run-to-run variance at low-ESS rows —
+composite count is the readout, not single rows).
 Attempt-4 program itself is COMPLETE (gate3c log): gate (iii) RED at 1/10
 under P1-mirror criteria with the gap inventory below.
 - (a) pathway diagnostic: PASS (ESS 80-84%, no objective bug; width legit).
