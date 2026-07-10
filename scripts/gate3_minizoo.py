@@ -112,6 +112,9 @@ def main():
     ap.add_argument("--aux", action="store_true", help="chain-summary tokens")
     ap.add_argument("--shortk", action="store_true", help="short-context augmentation")
     ap.add_argument("--out", default="gate3.json")
+    ap.add_argument("--eval-only", action="store_true",
+                    help="skip training; load params from --ckpt-in")
+    ap.add_argument("--ckpt-in", default=None)
     ap.add_argument("--criteria", choices=["legacy", "p1"], default="legacy",
                     help="p1: pre-registered P1-mirror composite, funnels at K=512"
                          " (log/2026-07-10-toy-gate3c.md section c)")
@@ -138,12 +141,18 @@ def main():
     step = make_train_step(model, tx, BATCH, len(SPECS), N_CTX, N_POOL,
                            shortk=args.shortk, K=K, n_aux=4 if args.aux else 0)
 
-    keys = jr.split(jr.key(33), STEPS)
-    for i in range(STEPS):
-        params, opt_state, loss = step(params, opt_state, keys[i], data)
-        if (i + 1) % 10_000 == 0:
-            print(f"step {i+1}: loss {float(loss):.4f} [{time.time()-t0:.0f}s]",
-                  flush=True)
+    if args.eval_only:
+        from ics.train import load_checkpoint
+        ck = load_checkpoint(args.ckpt_in)
+        params = jax.tree_util.tree_map(jnp.asarray, ck["params"])
+        print(f"loaded checkpoint {args.ckpt_in} (step {ck['step']})", flush=True)
+    else:
+        keys = jr.split(jr.key(33), STEPS)
+        for i in range(STEPS):
+            params, opt_state, loss = step(params, opt_state, keys[i], data)
+            if (i + 1) % 10_000 == 0:
+                print(f"step {i+1}: loss {float(loss):.4f} [{time.time()-t0:.0f}s]",
+                      flush=True)
 
     out = {"gate": "iii", "criteria": args.criteria, "targets": [],
            "heldout_theta_probes": []}
