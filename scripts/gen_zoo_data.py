@@ -31,6 +31,7 @@ from ics.zoo import FAMILIES_HELDOUT, FAMILIES_TRAIN, sample_target
 DS = (2, 4, 8, 16)
 K = 128
 N_POOL = 20_000
+T_MIX = [1.0, 1.0, 2.0, 2.0, 5.0, 5.0]  # Ruling 1 pre-registered mix
 
 
 def np_tree(t):
@@ -40,7 +41,8 @@ def np_tree(t):
 def gen_train(name, families, per_cell, key):
     specs = [(f, d, i) for f in families for d in DS for i in range(per_cell)]
     t0 = time.time()
-    targets, ctxs, data = build_zoo_dataset(key, specs, n_ctx=2, K=K, n_pool=N_POOL)
+    targets, ctxs, data = build_zoo_dataset(key, specs, n_ctx=6, K=K, n_pool=N_POOL,
+                                            temperature=T_MIX, aux_tokens=True)
     out = os.path.join(os.environ["SCRATCH"], "ics-zoo", name)
     os.makedirs(out, exist_ok=True)
     np.savez(os.path.join(out, "data.npz"),
@@ -61,9 +63,15 @@ def gen_eval(key):
                 kt, kc = jr.split(jr.fold_in(key, cell & 0x7FFFFFFF))
                 # unseen theta: eval seed stream disjoint from training folds
                 t = sample_target(jr.fold_in(kt, 555_000 + i), fam, d)
-                ctx = generate_context_for_target(kc, t, K=K)
+                k_eval = 512 if fam in ("funnel", "funnelmix") else K
+                kc1, kc5 = jr.split(kc)
+                ctx1 = generate_context_for_target(kc1, t, K=k_eval,
+                                                   temperature=1.0, aux_tokens=True)
+                ctx5 = generate_context_for_target(kc5, t, K=k_eval,
+                                                   temperature=5.0, aux_tokens=True)
                 rows.append(dict(family=fam, d=d, idx=i, heldout=heldout,
-                                 target=np_tree(t), context=np_tree(ctx)))
+                                 target=np_tree(t), context_t1=np_tree(ctx1),
+                                 context_t5=np_tree(ctx5)))
         print(f"eval {fam} done [{time.time()-t0:.0f}s]", flush=True)
     out = os.path.join(os.environ["SCRATCH"], "ics-zoo", "eval")
     os.makedirs(out, exist_ok=True)

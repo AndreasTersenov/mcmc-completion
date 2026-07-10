@@ -88,13 +88,15 @@ def main():
     import argparse
     ap = argparse.ArgumentParser()
     ap.add_argument("--z128-ckpt", default=None, help="override 128-model ckpt path")
+    ap.add_argument("--a-ckpt", default=None, help="override A-model ckpt (default b1, stripped)")
+    ap.add_argument("--a-no-strip", action="store_true", help="A model uses 41-dim tokens")
     ap.add_argument("--out", default="paired_eval.json")
     args = ap.parse_args()
     t0 = time.time()
     base = os.path.join(os.path.dirname(__file__), "..", "results")
     model = ICSModel(n_attn=2)  # identical arch for both checkpoints
     pb1 = jax.tree_util.tree_map(
-        jnp.asarray, load_checkpoint(os.path.join(base, "gate3_noshortk_params.pkl"))["params"])
+        jnp.asarray, load_checkpoint(args.a_ckpt or os.path.join(base, "gate3_noshortk_params.pkl"))["params"])
     p128 = jax.tree_util.tree_map(
         jnp.asarray, load_checkpoint(args.z128_ckpt or os.path.join(base, "gate3e_params.pkl"))["params"])
 
@@ -114,7 +116,8 @@ def main():
                     ref = bespoke_ref_sw2(t, ctx, 600_000 + 1000 * ci + 100 * i)
                     row["sw2_ref"] = ref
                 s0 = 900_000 + 1000 * ci + 100 * i + int(temp)
-                row[f"b1_{tag}"] = eval_one(model, pb1, t, strip_onehot(ctx), s0, ref)
+                ctx_a = ctx if args.a_no_strip else strip_onehot(ctx)
+                row[f"b1_{tag}"] = eval_one(model, pb1, t, ctx_a, s0, ref)
                 row[f"z128_{tag}"] = eval_one(model, p128, t, ctx, s0 + 10, ref)
             rows.append(row)
             n += 1

@@ -51,28 +51,31 @@ def main():
     out = []
     t0 = time.time()
     for i, row in enumerate(rows):
-        target, ctx = row["target"], Context(**{k: jnp.asarray(v) for k, v in
-                                                row["context"]._asdict().items()})
-        if args.nograd:
-            toks = np.asarray(ctx.tokens)
-            toks[..., DMAX + 1 : 2 * DMAX + 1] = 0.0
-            toks[..., 2 * DMAX + 2] = 0.0
-            ctx = ctx._replace(tokens=jnp.asarray(toks))
-        cert, x_gen = ics_evaluate(model, params, target, ctx,
-                                   jr.key(880_000 + i), n_eval=args.n_eval, n_ode=100)
+        target = row["target"]
+        rec = dict(family=row["family"], d=row["d"], idx=row["idx"],
+                   heldout=row["heldout"])
         fresh = np.asarray(sample_x(jr.key(881_000 + i), target, 2 * args.n_eval),
                            np.float64)
         fresh2 = np.asarray(sample_x(jr.key(882_000 + i), target, 2 * args.n_eval),
                             np.float64)
-        sw2 = sliced_w2_squared(x_gen, fresh, n_proj=128,
-                                rng=np.random.default_rng(i))
-        floor = sliced_w2_squared(fresh2, fresh, n_proj=128,
-                                  rng=np.random.default_rng(10_000 + i))
-        out.append(dict(
-            family=row["family"], d=row["d"], idx=row["idx"],
-            heldout=row["heldout"], sw2=float(sw2), sw2_floor=float(floor),
-            mode_recovery=mode_recovery(target, x_gen), **cert,
-        ))
+        rec["sw2_floor"] = float(sliced_w2_squared(
+            fresh2, fresh, n_proj=128, rng=np.random.default_rng(10_000 + i)))
+        for tag in ("t1", "t5"):
+            ctx = Context(**{k: jnp.asarray(v) for k, v in
+                             row[f"context_{tag}"]._asdict().items()})
+            if args.nograd:
+                toks = np.asarray(ctx.tokens)
+                toks[..., DMAX + 1 : 2 * DMAX + 1] = 0.0
+                toks[..., 2 * DMAX + 2] = 0.0
+                ctx = ctx._replace(tokens=jnp.asarray(toks))
+            cert, x_gen = ics_evaluate(model, params, target, ctx,
+                                       jr.key(880_000 + 2 * i + (tag == "t5")),
+                                       n_eval=args.n_eval, n_ode=100)
+            sw2 = sliced_w2_squared(x_gen, fresh, n_proj=128,
+                                    rng=np.random.default_rng(i))
+            rec[tag] = dict(sw2=float(sw2),
+                            mode_recovery=mode_recovery(target, x_gen), **cert)
+        out.append(rec)
         if (i + 1) % 24 == 0:
             print(f"{i+1}/{len(rows)} [{time.time()-t0:.0f}s]", flush=True)
     with open(args.out, "w") as f:

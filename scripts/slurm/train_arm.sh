@@ -20,4 +20,4 @@ fi
 shift
 python -u scripts/train_full.py --data "$DATA" \
   --ckpt "$SCRATCH/ics-zoo/ckpt_${ARM}.pkl" --status "$STATUS" \
-  --steps 300000 --time-budget-sec 9000 "$@"
+  --steps 1600000 --time-budget-sec 9000 "$@"

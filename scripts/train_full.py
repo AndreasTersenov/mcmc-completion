@@ -34,7 +34,7 @@ def main():
     ap.add_argument("--data", required=True)
     ap.add_argument("--ckpt", required=True)
     ap.add_argument("--status", required=True)
-    ap.add_argument("--steps", type=int, default=300_000)
+    ap.add_argument("--steps", type=int, default=1_600_000)
     ap.add_argument("--batch", type=int, default=512)
     ap.add_argument("--lr", type=float, default=1e-3)
     ap.add_argument("--time-budget-sec", type=int, default=9000)
@@ -53,7 +53,7 @@ def main():
     n_pool = data.pool.shape[1]
     print(f"data: {n_targets} targets x {n_ctx} ctx, pool {n_pool}", flush=True)
 
-    model = ICSModel()
+    model = ICSModel(n_attn=2)
     params = model.init(
         jr.key(52), jnp.ones((2, DMAX), jnp.float32), jnp.ones((2,), jnp.float32),
         data.tokens[:2, 0],
