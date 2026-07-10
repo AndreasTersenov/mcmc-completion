@@ -41,10 +41,13 @@ def build_zoo_dataset(key, specs, n_ctx, K, n_pool, temperature=1.0, aux_tokens=
         kt, kc, kp = jr.split(jr.fold_in(key, 1000 * i + off), 3)
         t = sample_target(kt, family, d)
         targets.append(t)
-        cs = [generate_context_for_target(k, t, K=K, temperature=temperature,
+        temps = (list(temperature) if hasattr(temperature, "__len__")
+                 else [temperature] * n_ctx)
+        assert len(temps) == n_ctx
+        cs = [generate_context_for_target(k, t, K=K, temperature=temps[ci],
                                           aux_tokens=aux_tokens,
                                           d_onehot=d_onehot)
-              for k in jr.split(kc, n_ctx)]
+              for ci, k in enumerate(jr.split(kc, n_ctx))]
         ctxs.append(cs)
         tok.append(np.stack([np.asarray(c.tokens, np.float32) for c in cs]))
         mus.append(np.stack([
