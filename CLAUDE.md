@@ -77,3 +77,9 @@ Login node = tests and short validation runs only. Anything beyond ~1 core-minut
 interactive iteration, account rrg-lplevass; consult the rorqual-jobs skill first.
 Note: remotes are live on GitHub (private) — push after every commit; earlier
 "local-only" notes above are outdated.
+
+## Scripted-edit rule (added 2026-07-10 after three silent no-op edits)
+
+Every scripted find/replace (sed/python -c/etc.) must be followed by a grep verifying
+the change landed (and, for outputs, a check that results are not byte-identical to the
+prior run when a change was intended). Silent no-ops corrupt attribution.
