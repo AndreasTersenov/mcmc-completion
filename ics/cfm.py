@@ -12,15 +12,21 @@ from jax_flows import ot_interpolate
 from .zoo import DMAX
 
 
-def cond_cfm_loss(params, model, x1, tokens, key, mask=None):
-    """L = E || v(x_t, t, tokens) - (x1 - x0) ||^2, per-row contexts."""
+def cond_cfm_loss(params, model, x1, tokens, key, mask=None, dim_weight=None):
+    """L = E w_d || v(x_t, t, tokens) - (x1 - x0) ||^2, per-row contexts.
+    dim_weight (B, DMAX): lever 4 — down-weight padding dims so capacity goes
+    to real dims while padding stays calibrated for the certificate's
+    DMAX-space density."""
     kt, kn = jr.split(key)
     b = x1.shape[0]
     t = jr.uniform(kt, (b,), dtype=x1.dtype)
     x0 = jr.normal(kn, x1.shape, dtype=x1.dtype)
     x_t = ot_interpolate(x0, x1, t)
     v = model.apply({"params": params}, x_t, t, tokens, mask)
-    return jnp.mean((v - (x1 - x0)) ** 2)
+    sq = (v - (x1 - x0)) ** 2
+    if dim_weight is not None:
+        sq = sq * dim_weight
+    return jnp.mean(sq)
 
 
 def make_velocity_fn(model, params, tokens):

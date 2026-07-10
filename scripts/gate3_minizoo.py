@@ -121,6 +121,10 @@ def main():
                     help="strip the 4 one-hot d slots (checkpoints trained pre-41-dim)")
     ap.add_argument("--head-wide", action="store_true",
                     help="lever 3: head_hidden (512,512,512)")
+    ap.add_argument("--pad-weight", type=float, default=None,
+                    help="lever 4: loss weight for padding dims (e.g. 0.1)")
+    ap.add_argument("--t-d2eval", type=float, default=0.0,
+                    help="if >0, temperature for d=2 eval contexts (coverage diagnostic)")
     ap.add_argument("--k-d2eval", type=int, default=0,
                     help="if >0, evaluate d=2 rows with this K (coverage diagnostic)")
     ap.add_argument("--criteria", choices=["legacy", "p1"], default="legacy",
@@ -160,7 +164,8 @@ def main():
     tx = optax.adam(optax.cosine_decay_schedule(LR, args.steps))
     opt_state = tx.init(params)
     step = make_train_step(model, tx, BATCH, len(SPECS), N_CTX, N_POOL,
-                           shortk=args.shortk, K=K, n_aux=4 if args.aux else 0)
+                           shortk=args.shortk, K=K, n_aux=4 if args.aux else 0,
+                           pad_weight=args.pad_weight)
 
     if args.eval_only:
         from ics.train import load_checkpoint

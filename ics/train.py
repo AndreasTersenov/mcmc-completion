@@ -71,7 +71,7 @@ def build_zoo_dataset(key, specs, n_ctx, K, n_pool, temperature=1.0, aux_tokens=
 
 
 def make_train_step(model, tx, batch, n_targets, n_ctx, n_pool,
-                    shortk=False, K=128, n_aux=0):
+                    shortk=False, K=128, n_aux=0, pad_weight=None):
     """shortk: per-row random effective context length k in {8,32,K} emulated
     by masking chain steps >= k/4 (chain-major token layout; aux summary
     tokens always kept). CAVEAT (logged): whitening/e_scale stay those of the
@@ -103,8 +103,12 @@ def make_train_step(model, tx, batch, n_targets, n_ctx, n_pool,
                 keep = jnp.concatenate(
                     [keep, jnp.ones((batch, n_aux), bool)], axis=1)
             mask = keep.astype(toks.dtype)
+        dw = None
+        if pad_weight is not None:
+            dw = mask_dims = data.dim_mask[ti]
+            dw = mask_dims + pad_weight * (1.0 - mask_dims)
         loss, grads = jax.value_and_grad(cond_cfm_loss)(
-            params, model, x1, toks, kl, mask)
+            params, model, x1, toks, kl, mask, dw)
         import optax
         updates, opt_state = tx.update(grads, opt_state)
         return optax.apply_updates(params, updates), opt_state, loss

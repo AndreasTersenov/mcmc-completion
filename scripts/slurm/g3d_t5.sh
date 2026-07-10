@@ -1,0 +1,12 @@
+#!/bin/bash
+#SBATCH --account=rrg-lplevass
+#SBATCH --gpus-per-node=1
+#SBATCH --time=00:45:00
+#SBATCH --mem=32G
+#SBATCH --cpus-per-task=6
+#SBATCH -o jobout/g3d_t5_%j.out
+module load python/3.11.5 gcc cuda/12.6
+source "$HOME/ics-env/bin/activate"
+cd "$HOME/software/mcmc-completion"
+python -u scripts/gate3_minizoo.py --attn --aux --criteria p1 --t-d2eval 5.0 \
+  --legacy-tokens --eval-only --ckpt-in results/gate3_noshortk_params.pkl --out gate3_t5.json
