@@ -1,20 +1,37 @@
 # JOBS.md — SLURM state + handoff (phase 1, toy)
 
-Updated 2026-07-10 (paired eval harvested). **No jobs in flight. STOPPED
-per directive** — evidence package assembled for the reconvene bar
-conversation (log/2026-07-10-paired-eval.md):
-- VERDICT: PAIRED-B-AMORTIZATION. 128-model better on 18/24 paired targets
-  (sign-test p~0.011); medians T=1 905->549 (1.65x), T=5 855->342 (2.5x),
-  at 10x less compute per pair. The gate3e P-sharp fail was a
-  population/theta artifact; the paired instrument reverses the conclusion.
-- CONTEXT: paired eval ran on FRESH theta (P1's generalization regime) where
-  both models are far from bars — distinct from gate-(iii)'s trained-target
-  regime. Decision requested from reconvene: redefine gate-(iii) sharpness
-  via the paired instrument, and/or proceed to gate-(iv) scale (1024
-  targets) on the measured scaling direction.
-- The 2M-compute chain remains STAGED (scripts/slurm/train128_2m.sh +
-  paired_eval_2m.sh) if the compute axis is wanted.
-Story figure: results/gate3_story.png. Budget ~14/480 H100-hours.
+Updated 2026-07-10 (GATE (iv) LAUNCHED, authorized by
+log/2026-07-10-reconvene-paired.md; pre-registration + full job table in
+log/2026-07-10-toy-gate4.md). **21 jobs queued/running:**
+datagen 15651223 (train4) / 15651225 (train2) / 15651226 (eval);
+arm chains train4 15651227-29, train2 15651230-32, train4ng 15651233-35
+(1.6M steps each = gate3e's 260 steps/pair held fixed at 6144 pairs);
+per-arm post: evals 15651236-38 -> results/eval_<arm>.json (dual (K,T)
+columns, fresh-theta regime), sanity floors 15651239-41 ->
+results/sanity_<arm>.json (trained-target regime, floor >= 6/24 & med ESS
+>= 1%), paired instruments 15651242-44 -> results/paired_<arm>.json
+(P-scale: median(gate3e)/median(arm) > 1 on T=1).
+
+## Harvest (in order; keep regimes SEPARATED in every report)
+1. Check sanity floors first: a SANITY-FLOOR-FAIL invalidates that arm
+   (diagnose + resubmit, do not reinterpret).
+2. Paired instruments -> P-scale verdict (70% expectation logged).
+3. P-assembly from eval jsons (fresh-theta): P1 (train4, heldout=False,
+   d<=8: ESS>=1% clause now; SW2 clause NEEDS baselines below); P2/P3
+   (heldout=True, mode_recovery column separates mode-drop); P11 (train4 vs
+   train4ng); P12 (train2 vs train4 heldout rows).
+4. Baselines 1-4 for the SW2 clauses: (1) untrained params via eval_full
+   --ckpt on an init checkpoint; (2) per-target FM 10 H100-min x ~12
+   representative eval targets; (3) energy-MLP-on-context + MALA; (4)
+   blackjax MCLMC at matched wall-clock (SW2/mode-recovery only).
+5. RESULTS-toy.md per PLAN: P-verdicts, zoo-diversity curve (P12),
+   certificate confusion matrix (mode-drop column separate), baseline
+   table, honest limits; carry-items: coverage law (paper figure,
+   results/gate3_story.png), funnel conditional-specific gap, three
+   information-ceiling reclassifications, PAIRED-B scaling direction.
+2M chain stays staged/superseded unless arms show undertraining (loss still
+falling at 1.6M or paired instrument regressing). Budget ~14/480 spent;
+chain adds ~15-20 H100-hours.
 
 ## Gap inventory after the P1-mirror measurement (results/gate3_p1.json)
 - warp-d2 PASSES (first certified target); ESS clause solved on 6/10 rows.
