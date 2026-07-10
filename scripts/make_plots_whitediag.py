@@ -40,15 +40,30 @@ truth = np.asarray(sample_x(jr.key(99), t, 1500))
 truth_w = np.asarray(whiten_apply(jnp.asarray(truth), ctx5.mu, ctx5.sigma))
 mu, sg = np.asarray(ctx5.mu), np.asarray(ctx5.sigma)
 
-fig, axes = plt.subplots(1, 2, figsize=(9.6, 4.6))
+fig, axes = plt.subplots(1, 2, figsize=(11.5, 4.8),
+                         gridspec_kw={'width_ratios': [1, 2.2]})
 ax = axes[0]
 ax.plot(truth_w[:, 0], truth_w[:, 1], "o", ms=2.4, alpha=0.4, color=MUTED,
         label="truth (whitened)")
 ax.plot(xw[:, 0], xw[:, 1], "o", ms=2.4, alpha=0.4, color=AQUA,
         label="model output (native space)")
+ax.set_aspect("equal")
+# adjacent-mode separation in the model's coordinates
+from ics.zoo import mode_centers
+mcw = (np.asarray(mode_centers(t)) - mu) / sg
+# the ACTUAL closest mode pair in whitened space (computed, not hand-picked)
+dists = np.linalg.norm(mcw[:, None, :] - mcw[None, :, :], axis=-1)
+np.fill_diagonal(dists, np.inf)
+i, j = np.unravel_index(np.argmin(dists), dists.shape)
+ax.annotate("", xy=tuple(mcw[j]), xytext=tuple(mcw[i]),
+            arrowprops=dict(arrowstyle="<->", color=RED, lw=1.6))
+ax.annotate(f"closest mode pair:\n{dists[i, j]:.2f} whitened units —\n"
+            "comparable to the blur",
+            (0.02, 0.02), xycoords="axes fraction", color=RED, fontsize=8.5,
+            va="bottom")
 ax.legend(fontsize=8.5, loc="upper left")
-ax.set_title("The model's OWN coordinates (whitened by the\nT=5 context: "
-             f"σ = [{sg[0]:.1f}, {sg[1]:.1f}])", fontsize=9.5, color=INK)
+ax.set_title("The model's OWN coordinates (equal aspect)\nwhitening SQUEEZES "
+             f"the target: σ = [{sg[0]:.1f}, {sg[1]:.1f}]", fontsize=9.5, color=INK)
 ax.set_xlabel("whitened x₁"); ax.set_ylabel("whitened x₂")
 ax = axes[1]
 xr = mu + sg * xw
@@ -59,9 +74,11 @@ ax.plot(xr[:, 0], xr[:, 1], "o", ms=2.4, alpha=0.4, color=AQUA,
 th = np.linspace(0, 2*np.pi, 100)
 ax.plot(mu[0] + sg[0]*np.cos(th), mu[1] + sg[1]*np.sin(th), "--", lw=1.4,
         color=RED, label="context whitening ellipse (1σ)")
+ax.set_aspect("equal")
 ax.legend(fontsize=8.5, loc="upper left")
-ax.set_title("Raw space: the same errors, stretched by σ\n(a unit blur in "
-             "model space becomes a 6.5-unit smear in x₁)", fontsize=9.5, color=INK)
+ax.set_title("Raw space (equal aspect): SAME clouds, de-whitened —\nevery "
+             "error stretched 6.5× horizontally, 2.3× vertically",
+             fontsize=9.5, color=INK)
 ax.set_xlabel("x₁"); ax.set_ylabel("x₂")
 fig.tight_layout()
 fig.savefig(os.path.join(R, "whitening_diag.png"), dpi=170)
