@@ -117,6 +117,10 @@ def main():
     ap.add_argument("--ckpt-in", default=None)
     ap.add_argument("--donehot", action="store_true", help="lever 1a: one-hot d slots")
     ap.add_argument("--steps", type=int, default=STEPS)
+    ap.add_argument("--legacy-tokens", action="store_true",
+                    help="strip the 4 one-hot d slots (checkpoints trained pre-41-dim)")
+    ap.add_argument("--head-wide", action="store_true",
+                    help="lever 3: head_hidden (512,512,512)")
     ap.add_argument("--k-d2eval", type=int, default=0,
                     help="if >0, evaluate d=2 rows with this K (coverage diagnostic)")
     ap.add_argument("--criteria", choices=["legacy", "p1"], default="legacy",
@@ -125,6 +129,13 @@ def main():
     ap.add_argument("--wide", action="store_true",
                     help="attempt-4 encoder scale: enc_dim 256, hidden 512, 4 attn blocks")
     args = ap.parse_args()
+
+    def _tok(ctx):
+        # legacy checkpoints: drop the 4 one-hot slots (keep trailing flag)
+        if not args.legacy_tokens:
+            return ctx
+        t_ = jnp.concatenate([ctx.tokens[:, :-5], ctx.tokens[:, -1:]], axis=1)
+        return ctx._replace(tokens=t_)
     t0 = time.time()
     print(f"building dataset... (attn={args.attn} aux={args.aux} shortk={args.shortk})",
           flush=True)
@@ -134,8 +145,14 @@ def main():
 
     if args.wide:
         model = ICSModel(enc_dim=256, enc_hidden=512, n_attn=4)
+    elif args.head_wide:
+        model = ICSModel(n_attn=2 if args.attn else 0,
+                         head_hidden=(512, 512, 512))
     else:
         model = ICSModel(n_attn=2 if args.attn else 0)
+    if args.legacy_tokens:
+        data = data._replace(tokens=jnp.concatenate(
+            [data.tokens[..., :-5], data.tokens[..., -1:]], axis=-1))
     params = model.init(
         jr.key(32), jnp.ones((2, DMAX), jnp.float32), jnp.ones((2,), jnp.float32),
         data.tokens[:2, 0],
@@ -169,6 +186,7 @@ def main():
             fresh_ctx = generate_context(jr.key(9000 + j), fn, d, K=k_eval,
                                          aux_tokens=args.aux)
             ref = bespoke_ref_sw2(t, fresh_ctx, 20_000 + 10 * j)
+            fresh_ctx = _tok(fresh_ctx)
             r = eval_on_p1(model, params, t, fresh_ctx, 10_000 + 10 * j, ref)
             if family == "funnel":
                 # K=128 behavior reported as a CERTIFICATE row (finding 3):
@@ -176,6 +194,7 @@ def main():
                 ctx128 = generate_context(jr.key(9500 + j), fn, d, K=K,
                                           aux_tokens=args.aux,
                                           d_onehot=args.donehot)
+                ctx128 = _tok(ctx128)
                 c128, _ = ics_evaluate(model, params, t, ctx128,
                                        jr.key(11_000 + j), n_eval=2048, n_ode=100)
                 r["k128_ess"] = c128["ess_frac_2n"]
@@ -184,6 +203,7 @@ def main():
         else:
             fresh_ctx = generate_context(jr.key(9000 + j), fn, d, K=K,
                                          aux_tokens=args.aux, d_onehot=args.donehot)
+            fresh_ctx = _tok(fresh_ctx)
             r = eval_on(model, params, t, fresh_ctx, 10_000 + 10 * j)
         r.update(family=family, d=d)
         n_pass += r["passed"]
@@ -196,6 +216,7 @@ def main():
         fn = lambda x, _t=t: logpdf(_t, x)
         fresh_ctx = generate_context(jr.key(7100 + j), fn, d, K=K,
                                      aux_tokens=args.aux, d_onehot=args.donehot)
+        fresh_ctx = _tok(fresh_ctx)
         r = eval_on(model, params, t, fresh_ctx, 7200 + 10 * j)
         r.update(family=family, d=d)
         out["heldout_theta_probes"].append(r)

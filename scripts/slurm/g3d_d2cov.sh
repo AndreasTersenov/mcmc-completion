@@ -8,5 +8,5 @@
 module load python/3.11.5 gcc cuda/12.6
 source "$HOME/ics-env/bin/activate"
 cd "$HOME/software/mcmc-completion"
-python -u scripts/gate3_minizoo.py --attn --aux --criteria p1 --k-d2eval 512 \
+python -u scripts/gate3_minizoo.py --attn --aux --criteria p1 --k-d2eval 512 --legacy-tokens \
   --eval-only --ckpt-in results/gate3_noshortk_params.pkl --out gate3_d2cov.json
