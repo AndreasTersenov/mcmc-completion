@@ -1,18 +1,18 @@
 # JOBS.md — SLURM state + handoff (phase 1, toy)
 
-Updated 2026-07-10 (gate3e harvested). **No jobs in flight.**
-Gate3e (128 targets): GATE3-FAIL 1/24, P-SHARP-FAIL under every cut
-(registered 487.9 vs bar 31; like-for-like T=1/same-cells 93->288) — BUT
-heterogeneous: T=1 pass-rate ROSE (4/24 vs 1/10) with best-ever rows
-(gmm-d8 SW2 0.036 @ ESS 28%; gmm-d2 ESS 94%) next to new catastrophic ones.
-Two confounds survive: unpaired theta draws; compute-per-pair shrank 10x.
-NEXT (pre-registered, log/2026-07-10-toy-gate3e.md): PAIRED EVAL of both
-checkpoints (results/gate3_noshortk_params.pkl 37-dim tokens via
---legacy-tokens; results/gate3e_params.pkl 41-dim + aux) on ONE common
-24-target set, both (K,T) columns, shared bespoke refs (~25 min, eval-only).
-Then the Ruling-2 bar conversation with paired evidence; if compute-scaling
-is implicated: 128 targets x 2M steps via the resumable 3h chain.
-Story figure: results/gate3_story.png. Budget ~13/480 H100-hours.
+Updated 2026-07-10 (paired eval in flight). **One job: 15647929 = PAIRED
+EVAL** (log/2026-07-10-paired-eval.md; verdict rule pre-registered).
+Harvest -> branch:
+- PAIRED-B (improvement >= 1.5x): assemble reconvene evidence package, STOP
+  (no bar movement here).
+- PAIRED-A (< 1.5x): launch the staged 2M chain immediately:
+    J1=$(sbatch --parsable scripts/slurm/train128_2m.sh)
+    J2=$(sbatch --parsable --dependency=afterany:$J1 scripts/slurm/train128_2m.sh)
+    J3=$(sbatch --parsable --dependency=afterany:$J2 scripts/slurm/train128_2m.sh)
+    sbatch --dependency=afterany:$J3 scripts/slurm/paired_eval_2m.sh
+  (~5.5h train across 3 b1 slots + paired re-eval vs the 2M checkpoint;
+  pre-log job IDs + config hashes in log/2026-07-10-paired-eval.md first.)
+Story figure: results/gate3_story.png. Budget ~13.5/480 H100-hours.
 
 ## Gap inventory after the P1-mirror measurement (results/gate3_p1.json)
 - warp-d2 PASSES (first certified target); ESS clause solved on 6/10 rows.
