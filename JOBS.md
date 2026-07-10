@@ -1,26 +1,21 @@
 # JOBS.md — SLURM state + handoff (phase 1, toy)
 
-Updated 2026-07-10 (post-attempt-3 review). **Two jobs in flight (gate3d program):**
-- 15635457 = T=5 d=2 eval diagnostic (b1 ckpt, --legacy-tokens) ->
-  gate3_t5.json. Tempered contexts DO mode-hop (K=512 at T=1 did not:
-  visit counts [1,201,94,154,61,1]). If mode_recovery -> ~1: d=2 drop is
-  CONTEXT-COVERAGE-limited; tempered-context protocol goes to the reconvene.
-  If covering context + still dropping: real model bug -> lever 1b.
-- 15635459 = lever 4 (pad-weight 0.1, 200k, p1) -> gate3_padw.json. The
-  padding hypothesis: conditional flows burn 75% of dims on noise transport
-  at d=4 (bespoke refs run at true d — systematic difference). Readout:
-  composite count + SW2 rows.
-DONE this program: 1a (one-hot d) refuted; lever 2 (400k) exonerated;
-lever 3 (head width) exonerated; d2cov-at-K=512 inconclusive (non-covering).
-Sharpness suspects remaining: padding (lever 4 in flight), then the
-objective/data regime itself (10 targets may be too few for sharp
-conditional interpolation — a gate-design question if lever 4 fails).
-Attempt-4 program itself is COMPLETE (gate3c log): gate (iii) RED at 1/10
-under P1-mirror criteria with the gap inventory below.
-- (a) pathway diagnostic: PASS (ESS 80-84%, no objective bug; width legit).
-- (b1) shortK ablation: d=2 hypothesis REFUTED; shortK REMOVED (it was the
-  mid-d sharpness killer: dwell-d4 0.2% -> 20.3% ESS without it).
-- capacity probe: width NOT the lever (mixed noise). Recipe: --attn --aux.
+Updated 2026-07-10 (gate3d, fixed wiring — see VOID notice in
+log/2026-07-10-toy-gate3d.md). **Two jobs in flight:**
+- 15638175 = T=5 d=2 diagnostic, temperature ACTUALLY applied ->
+  gate3_t5.json (overwrites void result). Readout: d=2 mode_recovery/logZ
+  with genuinely covering tempered contexts.
+- 15638176 = lever 1a RE-EVAL with matching one-hot eval contexts ->
+  gate3_d1_fixed.json (original 1a verdict void: train/eval token mismatch).
+LEDGER: lever 2 (length) exonerated; lever 3 (head width) exonerated;
+lever 4 (pad-weight) plausible-but-unproven (warp rows improve, composite
+unchanged); 1a and the tempered-context question pending the fixed runs.
+If sharpness still stalls after lever 4 + 1a-reeval: the data regime
+(10 targets) is the last suspect -> gate-DESIGN question for the reconvene,
+alongside the tempered-context protocol question.
+PROCESS RULE (adopted after two silent no-op edits, then a third caught by
+git): grep-verify every scripted replace; byte-identical outputs across a
+changed condition = no-op alarm, not a finding.
 
 ## Gap inventory after the P1-mirror measurement (results/gate3_p1.json)
 - warp-d2 PASSES (first certified target); ESS clause solved on 6/10 rows.
