@@ -1,19 +1,26 @@
 # JOBS.md — SLURM state + handoff (phase 1, toy)
 
-Updated 2026-07-10 (post-reconvene). **One job in flight: 15617204 = gate
-(iii) attempt 3** (encoder arm: --attn --aux --shortk; pre-registered in
-log/2026-07-10-toy-gate3b.md; monitor via jobout/gate3_15617204.out, verdict
-line GATE3-PASS/FAIL + results/gate3.json with the mandatory mode_recovery
-column). Whitening RESOLVED: study (job 15612008) kept the status quo and
-rejected the x3 err-wide arms — see log/2026-07-10-reconvene-gate3.md.
-Gates (i)+(ii) GREEN. Gate (iv) MUST NOT be submitted until (iii) is green.
+Updated 2026-07-10 (post-attempt-3 review). **Three jobs in flight**, all
+part of the review-directed attempt-4 program (log/2026-07-10-toy-gate3c.md):
+| job | what | readout |
+|-----|------|---------|
+| 15619456 | (a) pathway diagnostic: gate-2 pair overfit with --attn 2 --aux | GATE2-PASS at deep-sets levels => width is the lever; FAIL => pathway/objective bug, STOP scaling |
+| 15619457 | (b1) shortk ablation: attempt-3 config minus --shortk | d=2 rows only (gmm-d2 mode_recovery vs 0.67, dwell-d2 vs 0.50, logZ): confirms/refutes "shortK creates low-d ambiguity"; PASS/FAIL line void |
+| 15617204 | capacity probe (--wide, relabeled) | per-row mid-d ESS only; PASS/FAIL line void |
 
-## Harvest for 15617204
-- PASS -> append verdict+numbers to log/2026-07-10-toy-gate3b.md, commit
-  (gate green+committed), then submit gate (iv) recipe below.
-- FAIL -> compare per-failure-mode vs attempt 2 (results/gate3.json history
-  in git): did mode-drop rows heal? funnels? Next lever per pre-registration
-  is architecture SCALE (wider encoder / more blocks), not more steps.
+## Harvest
+1. Read the three jsons (gate2_newarch.json, gate3_noshortk.json, gate3.json)
+   + jobout files; append readouts to log/2026-07-10-toy-gate3c.md; commit.
+2. Choose the d=2 fix per (b1): if confirmed, next arm = K-aware shortK
+   (restrict augmentation to d>=4), NOT dropping augmentation.
+3. THE GATE RE-RUN uses the pre-registered P1-mirror criteria:
+   `python scripts/gate3_minizoo.py --attn --aux [--shortk|d>=4-variant] --criteria p1 --out gate3_p1.json`
+   (+ --wide only if BOTH (a) passes and the capacity probe shows mid-d ESS
+   gains). Pre-log job + config hash first, as always.
+4. On GATE3-PASS under p1 criteria: commit gate (iii) green, then the gate-(iv)
+   chain below. Note: eval_full.py should gain the same funnel-K=512 handling
+   before gate (iv) evals (finding 3 applies there too) — small patch, do it
+   before submitting the arms.
 
 ## Environment (everything assumes this)
 - venv `~/ics-env` (jax 0.9.1 + cuda12 plugin; distrax/diffrax dropped — see
