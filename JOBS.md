@@ -1,14 +1,14 @@
 # JOBS.md — SLURM state + handoff (phase 1, toy)
 
-Updated 2026-07-10 (post-reconvene). **One job in flight: 15615537 = gate
+Updated 2026-07-10 (post-reconvene). **One job in flight: 15617204 = gate
 (iii) attempt 3** (encoder arm: --attn --aux --shortk; pre-registered in
-log/2026-07-10-toy-gate3b.md; monitor via jobout/gate3_15615537.out, verdict
+log/2026-07-10-toy-gate3b.md; monitor via jobout/gate3_15617204.out, verdict
 line GATE3-PASS/FAIL + results/gate3.json with the mandatory mode_recovery
 column). Whitening RESOLVED: study (job 15612008) kept the status quo and
 rejected the x3 err-wide arms — see log/2026-07-10-reconvene-gate3.md.
 Gates (i)+(ii) GREEN. Gate (iv) MUST NOT be submitted until (iii) is green.
 
-## Harvest for 15615537
+## Harvest for 15617204
 - PASS -> append verdict+numbers to log/2026-07-10-toy-gate3b.md, commit
   (gate green+committed), then submit gate (iv) recipe below.
 - FAIL -> compare per-failure-mode vs attempt 2 (results/gate3.json history
