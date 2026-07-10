@@ -1,21 +1,25 @@
 # JOBS.md — SLURM state + handoff (phase 1, toy)
 
-Updated 2026-07-10 (post-attempt-3 review). **One job in flight: 15622335** — the gate-(iii)
-measurement under the pre-registered P1-mirror criteria (eval-only on the
-(b1) checkpoint; log/2026-07-10-toy-gate3c.md). Attempt-4 program state:
+Updated 2026-07-10 (post-attempt-3 review). **No jobs in flight.** The attempt-4 program is COMPLETE and harvested
+(log/2026-07-10-toy-gate3c.md): gate (iii) stays RED at 1/10 under the
+P1-mirror criteria, with a precise gap inventory.
 - (a) pathway diagnostic: PASS (ESS 80-84%, no objective bug; width legit).
 - (b1) shortK ablation: d=2 hypothesis REFUTED; shortK REMOVED (it was the
   mid-d sharpness killer: dwell-d4 0.2% -> 20.3% ESS without it).
 - capacity probe: width NOT the lever (mixed noise). Recipe: --attn --aux.
 
-## Harvest for 15622335 (results/gate3_p1.json)
-Per-row composite vs bespoke refs; funnel rows = K=512 composite + K=128
-refusal correctness. Expected NOT a pass (see pre-registration): d=2 mode
-drop fails 2 rows; SW2-vs-2x-bespoke is the open sharpness gap. Next levers
-IN ORDER (pre-register each): (1) d=2 fix variables — d-embedding (one-hot d
-instead of scalar d/DMAX), per-family balance; (2) training length on the
-no-shortk recipe; (3) head capacity. On an eventual GATE3-PASS: patch
-eval_full.py with the same funnel-K=512 handling, then the gate-(iv) chain.
+## Gap inventory after the P1-mirror measurement (results/gate3_p1.json)
+- warp-d2 PASSES (first certified target); ESS clause solved on 6/10 rows.
+- (1) CONDITIONAL SHARPNESS is the dominant gap: SW2 30-400x bespoke refs.
+- (2) d=2 mode drop: localized bug, survives all ablations.
+- (3) funnels fail conditionally even at K=512 (bespoke passes with the same
+  whitening) — conditional-model-specific. K=128 refusal behavior correct.
+## Next levers IN ORDER (pre-register each in a new gate3d log):
+(1) d=2 fix — d-embedding one-hot, then per-family balance (eval-only reuse
+    of checkpoints where possible); (2) training length on the no-shortk
+    recipe (b1 loss plateau ~1.38 may be real convergence — check with 400k);
+    (3) head capacity for sharpness. On eventual GATE3-PASS: patch
+    eval_full.py with funnel-K=512 handling, then the gate-(iv) chain.
 
 ## Environment (everything assumes this)
 - venv `~/ics-env` (jax 0.9.1 + cuda12 plugin; distrax/diffrax dropped — see
