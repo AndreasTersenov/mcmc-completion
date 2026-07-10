@@ -29,7 +29,8 @@ class ZooData(NamedTuple):
     d: jnp.ndarray        # (T,) int32
 
 
-def build_zoo_dataset(key, specs, n_ctx, K, n_pool, temperature=1.0, aux_tokens=False):
+def build_zoo_dataset(key, specs, n_ctx, K, n_pool, temperature=1.0, aux_tokens=False,
+                      d_onehot=False):
     """specs: list of (family, d) or (family, d, seed_offset). Returns
     (targets list, contexts list-of-lists, ZooData)."""
     targets, ctxs = [], []
@@ -41,7 +42,8 @@ def build_zoo_dataset(key, specs, n_ctx, K, n_pool, temperature=1.0, aux_tokens=
         t = sample_target(kt, family, d)
         targets.append(t)
         cs = [generate_context_for_target(k, t, K=K, temperature=temperature,
-                                          aux_tokens=aux_tokens)
+                                          aux_tokens=aux_tokens,
+                                          d_onehot=d_onehot)
               for k in jr.split(kc, n_ctx)]
         ctxs.append(cs)
         tok.append(np.stack([np.asarray(c.tokens, np.float32) for c in cs]))

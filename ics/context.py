@@ -30,7 +30,7 @@ import jax.random as jr
 
 from .zoo import DMAX, logpdf
 
-TOKEN_DIM = 2 * DMAX + 5  # last dim: summary-token flag (0 = chain point)
+TOKEN_DIM = 2 * DMAX + 9  # +4 one-hot d slots (zero unless d_onehot); last dim: summary flag
 N_CHAINS = 4
 INIT_SCALE = 5.0
 STEP_CANDIDATES = (0.5, 0.15, 0.05)
@@ -108,7 +108,8 @@ def _mala_target(target, key, n_steps, step, temperature):
     return xs, accs.mean()
 
 
-def generate_context_for_target(key, target, K, temperature=1.0, aux_tokens=False):
+def generate_context_for_target(key, target, K, temperature=1.0, aux_tokens=False,
+                                d_onehot=False):
     """Zoo-scale context generation: jit-cached per (family, d, K)."""
     assert K % N_CHAINS == 0
     k_probe, k_run = jr.split(key)
@@ -122,11 +123,12 @@ def generate_context_for_target(key, target, K, temperature=1.0, aux_tokens=Fals
     energy = -logpdf(target, x_raw)
     ld_single = lambda xi: logpdf(target, xi[None, :])[0]
     grad_e = -jax.vmap(jax.grad(ld_single))(x_raw)
-    return _build_context(x_raw, energy, grad_e, accept, step, target.d, aux_tokens)
+    return _build_context(x_raw, energy, grad_e, accept, step, target.d, aux_tokens,
+                          d_onehot)
 
 
 def generate_context(key, logpdf_fn, d, K, n_chains=N_CHAINS, temperature=1.0,
-                     aux_tokens=False):
+                     aux_tokens=False, d_onehot=False):
     assert n_chains == N_CHAINS, "frozen protocol: 4 chains"
     assert K % N_CHAINS == 0
     n_steps = K // N_CHAINS
@@ -145,10 +147,11 @@ def generate_context(key, logpdf_fn, d, K, n_chains=N_CHAINS, temperature=1.0,
 
     energy = -logpdf_fn(x_raw)
     grad_e = -jax.vmap(jax.grad(ld_single))(x_raw)
-    return _build_context(x_raw, energy, grad_e, accept, step, d, aux_tokens)
+    return _build_context(x_raw, energy, grad_e, accept, step, d, aux_tokens, d_onehot)
 
 
-def _build_context(x_raw, energy, grad_e, accept, step, d, aux_tokens=False):
+def _build_context(x_raw, energy, grad_e, accept, step, d, aux_tokens=False,
+                   d_onehot=False):
     mu = x_raw.mean(axis=0)
     sigma = x_raw.std(axis=0) + 1e-6
     x_white = whiten_apply(x_raw, mu, sigma)
@@ -163,8 +166,13 @@ def _build_context(x_raw, energy, grad_e, accept, step, d, aux_tokens=False):
     pad = lambda a: jnp.concatenate(
         [a, jnp.zeros((K_, DMAX - d), dtype=a.dtype)], axis=1
     )
+    onehot = jnp.zeros(4)
+    if d_onehot:  # lever 1a: d in {2,4,8,16} -> slot log2(d)-1
+        onehot = onehot.at[{2: 0, 4: 1, 8: 2, 16: 3}[d]].set(1.0)
     const = jnp.tile(
-        jnp.array([jnp.log(e_scale), jnp.log(g_scale), d / DMAX])[None, :], (K_, 1)
+        jnp.concatenate(
+            [jnp.array([jnp.log(e_scale), jnp.log(g_scale), d / DMAX]), onehot]
+        )[None, :], (K_, 1)
     )
     flag = jnp.zeros((K_, 1))
     tokens = jnp.concatenate(
