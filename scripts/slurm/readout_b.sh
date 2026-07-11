@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --account=rrg-lplevass
 #SBATCH --gpus-per-node=1
-#SBATCH --time=00:30:00
+#SBATCH --time=02:00:00
 #SBATCH --mem=32G
 #SBATCH --cpus-per-task=6
 #SBATCH -o jobout/readoutb_%j.out

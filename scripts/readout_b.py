@@ -101,11 +101,17 @@ def main():
         t = row["target"]
         ctx = Context(**{k: jnp.asarray(v)
                          for k, v in row["context_t5"]._asdict().items()})
+        t_row = time.time()
         cert, x_gen, allin = ics_allin(model, params, t, ctx, seed=80_000 + 100 * n)
+        t_a = time.time()
         fresh = np.asarray(sample_x(jr.key(81_000 + 100 * n), t, 2 * N_EVAL),
                            np.float64)
+        t_f = time.time()
         sw2 = float(sliced_w2_squared(np.asarray(x_gen, np.float64), fresh,
                                       n_proj=128, rng=np.random.default_rng(n)))
+        t_s = time.time()
+        print(f"  row timing: allin {t_a-t_row:.1f}s fresh {t_f-t_a:.1f}s "
+              f"sw2 {t_s-t_f:.1f}s", flush=True)
         b4 = b4_by_key.get((f, d, i))
         mclmc_allin = (b4["adapt_seconds"] + b4["sample_seconds"]) if b4 else None
         rec = dict(
@@ -121,7 +127,8 @@ def main():
                   indent=1)
         print(f"[{n+1}/{len(subset)}] {f}-d{d}: sw2={sw2:.3f} vs b4 "
               f"{rec['b4_sw2']:.3f} | allin {allin:.1f}s vs {mclmc_allin:.1f}s | "
-              f"crossover={rec['crossover']}", flush=True)
+              f"crossover={rec['crossover']} [total {time.time()-t_start:.0f}s]",
+              flush=True)
 
     out["crossover_count"] = sum(r["crossover"] for r in out["rows"])
     out["n"] = len(out["rows"])
