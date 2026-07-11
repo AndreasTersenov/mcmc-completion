@@ -113,3 +113,34 @@ styles. Reuse the existing eval harness and stage-0 certificate code untouched.
 `RESULTS-phase1b.md`: the five-checkpoint curves (both regimes, both readouts), the
 branch verdict with the rule applied verbatim, prediction verdicts, honest limits.
 Written for the reconvene; assumes this PLAN, not the code.
+
+---
+
+## AMENDMENT (2026-07-11, pre-launch; Andreas's usefulness requirement) — FROZEN
+
+### Readout C — the usefulness barometer (eval-only; NON-GATING)
+
+At the 200k baseline and 2M checkpoints, evaluate the model ZERO-SHOT on 2–3 REAL
+inference problems within dimensional reach, references from long exact chains
+(NUTS/MCLMC, R̂-checked): (a) eight-schools (non-centered, d≈10 — deliberately
+funnel-geometry); (b) one inference-gym standard with d ≤ 10; (c) a real weak-lensing
+band-power posterior (d=3: Ω_m, σ₈, n_s) built from the eft-sbi phase-0.5 machinery
+(~/software/eft-sbi — Gaussian band-power likelihood; coordinate with that repo
+read-only). Contexts: short stalled chains on the real targets, (x, E, ∇E) via
+autodiff, standard protocol. Metrics: certified ESS + doubling flag, SW2 vs reference,
+and the Readout-B cost accounting per target. **These numbers do not gate any branch**
+(zero-shot out-of-zoo at toy scale is expected to be partial); they are reported
+prominently in RESULTS-phase1b as the usefulness barometer and they SHAPE the
+phase-2/pivot conversation.
+
+### Usefulness clauses (bind the follow-ups, not this run)
+
+- ALIVE branch phase-2 scoping MUST be product-shaped: zoo rebuilt around real problem
+  families (reference-chain ground truth), a blackjax/NumPyro "stalled-chain" adapter,
+  and the certified-proposal wrapper as the product surface.
+- The project's north star, superseding all bars: **accelerate one real inference
+  problem end-to-end for a real user — the first candidate user is Andreas's own
+  thesis/CosmOrford chains (dogfooding).** Any phase-2 plan must name its first real
+  user problem explicitly.
+- Claude pre-registration for Readout C (60%): at 2M, at least one real target (most
+  likely the d=3 band-power posterior) yields stable certified ESS ≥ 1% zero-shot.
