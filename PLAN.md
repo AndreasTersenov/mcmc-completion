@@ -1,118 +1,115 @@
-# PLAN — Toy phase: the in-context sampler, first working version
+# PLAN — Phase 1b: the decisive compute experiment (+ proposal-engine readout)
 
-**Phase 1 of the flagship.** Stage-0 passed (see `PLAN-stage0.md` + `RESULTS.md`,
-2026-07-09): the certificate envelope is the exact identity ESS/N = exp(−D₂(p‖q)), the
-oracle ceiling doesn't bind in-family, gradients are worth ≥4× in context. This phase
-tests the core hypothesis stage-0 could not: **can a single trained network actually do
-in-context sampling of unseen targets?** Everything here inherits the stage-0-derived
-capability targets (RESULTS §end). Wider context:
-`~/claude-notes/brainstorms/2026-07-09-dl-project-directions.md` (§D1, v3).
+**Status of the project entering this phase** (context for a compacted/fresh session —
+re-anchor from disk, not memory: RESULTS-toy.md, log/2026-07-10-*.md, JOBS.md):
+the toy phase closed with the scaling direction confirmed (P-scale: paired medians
+905→561→345 across 10→128→1024 targets) and the absolute bars unmet (P1 NOT MET; ~300×
+SW2 gap to bespoke). The zoo axis alone cannot close the gap (measured ~1.6× per 8×
+targets). Two hypotheses remain for the gap, and THIS RUN decides between them:
 
-**Stack (binding, per CLAUDE.md):** JAX — blackjax (chains + MCLMC), distrax (zoo
-families), flax or equinox + optax, Andreas's `~/software/jax_flows` as the
-flow-matching core. GPU work via SLURM only (login-node rule).
+- **H-starve:** per-target compute is the binding constraint (arms got ~260 steps/pair,
+  ~100× less optimization than the bespoke baseline; trained-target quality was weak
+  across ALL generations — the starvation signature; gates i–ii prove the architecture
+  can represent sharp conditionals at 80–98% ESS).
+- **H-structural:** the per-dim sharpness gap is intrinsic to this design at any
+  feasible compute.
+
+Additionally, the foundations review (2026-07-11) established the **proposal-engine
+frame**: the mathematically strongest product is "learned proposals + exact IS/SMC
+wrapper" — correctness classical at any proposal quality, quality = efficiency on a
+cost curve. This run carries that as a co-primary readout, NOT as a change to the
+system under test.
 
 ---
 
-## FROZEN CORE — do not modify (pre-registered 2026-07-09, evening)
+## FROZEN CORE — do not modify (pre-registered 2026-07-11; Andreas + reconvene)
 
-### The system under test
+### The run: ONE variable
 
-One network: a permutation-invariant context encoder over tokens
-(x, E_centered, ∇E) from short MALA chains (stage-0 protocol: 4 chains × K/4 steps,
-overdispersed inits; **context-centered energies** — offset invariance is mandatory),
-conditioning a flow-matching sampler head. Trained across a zoo of targets with exact
-samples; zero per-target adaptation at test time. Output protocol: samples + SNIS
-certificate **including the N-doubling check** (stage-0: point-ESS is not trustworthy;
-instability is the malignancy signal).
+Training: the gate3e recipe EXACTLY (128-target zoo from the gate3e datagen, T-mix
+contexts [1,1,2,2,5,5], attn-2 + aux, no shortk, same seed) with steps **200k → 2M**
+(cosine stretched proportionally — the one bundled necessity; mitigated by the curve
+readout). Resumable 3h-chain (staged scripts/slurm/train128_2m.sh). Checkpoints saved
+and evaluated at **0.25M, 0.5M, 1M, 1.5M, 2M**. No other change of any kind: no
+whitening fix, no architecture change, no zoo change, no new families. (The √T
+whitening arm and the certificate dispersion-check mitigation are PARKED for phase 2.)
 
-### Zoo v1 (train) and held-out families (test)
+### Readout A — the compute curve (decides H-starve vs H-structural)
 
-- **Train families (4):** GMMs (k ∈ 1..8, random means/covs/weights); coupled
-  double-wells; funnels (σᵥ ∈ [0.5, 3]); randomly-warped Gaussians (smooth invertible
-  pushforwards — exactly sampleable, exact log-density via change of variables).
-  d ∈ {2, 4, 8, 16}. Every family exactly sampleable with known log Z ≡ 0
-  (normalized by construction) — no ground-truth bottleneck.
-- **Held-out θ** within train families (in-family generalization) AND **held-out
-  families (2)** never seen in training: banana/Rosenbrock-warped Gaussians;
-  mixtures-of-funnels. Cross-family = the zero-shot test.
-- Zoo-diversity arms for P12: identical compute, train on {2, 4} families (8 optional
-  if time allows).
+At every checkpoint, with the frozen instruments:
+- **Paired instrument** on the SAME common 24-target set (same contexts, same bespoke
+  references as the toy-phase paired evals). Metrics: paired SW2²/bespoke medians;
+  frozen P1-mirror composite fractions; per-dim D̂₂ = −ln(ESS)/d with reliability flags
+  (stage-0's quartic law; decisions do not hinge on unreliable cells).
+- **Trained-target subsample** (the relative sanity instrument from gate-iv, same
+  24-target subsample): composite fraction.
+- Both (K,T) columns reported; **T=1 is the primary scoring column for this phase**
+  (sidesteps the known √T whitening squeeze without bundling a fix).
 
-### Evaluation (frozen)
+### Readout B — the cost-crossover (the proposal-engine frame)
 
-Metrics: sliced-W2 vs exact samples; D̂₂ = −ln(ESS/N) via the stage-0 identity; |logẐ|
-error; certificate protocol = ESS at N and 2N + stability flag. Mode-recovery rate
-measured explicitly against known zoo mode structure (the certificate's declared blind
-spot — reported, never hidden).
+On the 12-target subset with existing B2/B4 references, at 200k (baseline, exists) and
+2M: **(i) crossover count** — number of targets where ICS-with-SNIS reaches
+MCLMC-matched quality at lower end-to-end wall-clock per NEW target (all-in: forward
+sampling + weights + doubling check vs adaptation + sampling); **(ii) certified
+effective samples per second per new target** vs MCLMC's including adaptation. Metric
+definitions frozen; procedure details are periphery. Baseline value: crossover 3/12.
 
-Baselines (all four, no cherry-picking):
-1. Prior/untrained head (floor).
-2. Per-target FM sampler, trained 10 H100-minutes per target (the "bespoke" reference).
-3. Samples→energy→Langevin pipeline in the spirit of arXiv:2406.12785 (inverse
-   direction) — the citable ablation.
-4. **MCLMC (blackjax) per-target at matched per-target wall-clock** — the P7 frame:
-   report amortized marginal cost per new target, not single-target raw speed.
+### Decision rule — asymmetric and branch-complete (ambiguity = negative)
 
-### Pre-registered predictions
+Let TT = trained-target composite fraction at 2M; FQ = paired fresh-θ median
+SW2²/bespoke improvement vs the 200k checkpoint; FE = any d=4 family reaching median
+certified ESS ≥ 5% (fresh-θ, T=1).
 
-- **P1 (75%):** in-family, unseen θ, K=128 with gradients: D̂₂ ≤ 4.6 (ESS/N ≥ 1%) for
-  ≥80% of test targets at d ≤ 8; sliced-W2 within 2× of baseline-2.
-- **P2 (70%):** zero-shot cross-family largely fails at the mode level (ESS/N < 0.1%
-  or doubling-unstable on ≥50% of held-out-family targets) at the 2-family arm.
-- **P3 (65%):** the certificate correctly refuses: among cross-family targets with bad
-  sliced-W2, ≥90% are flagged by (ESS below threshold OR doubling instability);
-  false-blessing rate <10% **excluding** mode-drop cases (reported separately as the
-  known blind spot).
-- **P11 (60%):** gradient tokens help cross-family transfer more than in-family
-  (relative ESS gain larger on held-out families).
-- **P12 (55%):** held-out-family performance improves monotonically 2→4 train families
-  at fixed compute — the scaling-curve seed.
-- **P7 (70%, carried):** MCLMC wins any single target at matched per-target budget;
-  the ICS wins the many-targets regime (crossover count reported).
+1. **ALIVE** (H-starve confirmed): TT ≥ 50% AND (FQ ≥ 4× OR FE). → Report and STOP.
+   Phase-2 scoping is a reconvene decision (joint zoo×compute program + proposal-engine
+   product). 1024-zoo@2M becomes authorized but NOT auto-launched.
+2. **MEMORIZE** (compute helps training, not transfer): TT ≥ 50% AND neither FQ ≥ 4×
+   nor FE. → Pre-assigned single follow-up: 1024-zoo@2M, same protocol, decision
+   re-applied on the fresh-θ criteria only. (Tests whether generalization needs zoo AND
+   compute jointly.)
+3. **STRUCTURAL** (H-starve refuted): TT < 50% at 2M AND the trained-target curve has
+   plateaued (<10% relative improvement over the final 500k). → Conditional capacity
+   arm fires ONLY IF the plateau occurred before 1M: one run, 2× encoder+head width,
+   1M steps, same rule once. If it also lands here → the PIVOT conversation (= the
+   K-T1 conversation), with pre-listed options: per-domain scoping; proposal-engine
+   product scoped to d ≤ 4 at current quality; fold the certificate machinery into the
+   D2-style inference engine; park.
+4. **Readout B modifies the pivot options, not the branch:** crossover ≥ 6/12 at 2M
+   means the amortized proposal engine is already cost-competitive in a niche — that
+   evidence enters any pivot conversation.
 
-### Kill / gate criteria
+### Pre-registered predictions (Claude, 2026-07-11 — for the scorecard)
 
-- **K-T1 (kill):** if P1 fails after honest effort within the phase budget (below) —
-  in-context conditioning doesn't work even in-family — STOP, document, reconvene
-  (pivot options: D4-focus, or per-domain scoping à la TBG).
-- **K-T2 (scope, not kill):** if P12 is flat (zoo diversity buys nothing cross-family),
-  the "foundation sampler" story shrinks to per-domain amortization — reconvene on
-  framing before any further scaling.
-- **Budget cap: 20 H100-days total for this phase.** The Karpathy gate is mandatory
-  and *ordered*: (i) overfit ONE target with the FM head (no context) → (ii) overfit
-  one (context, target) pair → (iii) 10-target mini-zoo → (iv) full training. No
-  multi-hour job before the previous gate is green and committed.
+- Branch distribution: **ALIVE 45% / MEMORIZE 25% / STRUCTURAL 30%.**
+- **P-curve (70%):** the trained-target curve is still visibly rising at 2M (no
+  plateau by the rule above).
+- **P-crossover (65%):** crossover count improves 3/12 → ≥5/12 at 2M.
 
-### Out of scope (do NOT build)
+### Budget & discipline
 
-d > 16; lattice/discrete targets; adaptive probing policies; log-Z machinery beyond
-SNIS; NumPyro/real-application showcases (phase 2); any per-target fine-tuning of the
-ICS at test time; architecture innovation beyond what the interfaces above require.
+Phase cap: **40 H100-hours** (2M chain ≈ 6h; evals ≈ 1h; conditional arm ≈ 4h;
+memorize-branch 1024@2M ≈ 30h only if that branch fires). Every chain link logged
+pre-submission (job ID, config hash, expected outcome). The session REPORTS AND STOPS
+at every branch point — phase-2 scoping decisions belong to the reconvene, not to this
+run.
+
+### Out of scope
+
+Everything not named above. In particular: no new training tricks, no eval-bar edits,
+no zoo edits (the banana-d≥8 numeric fix is parked with a note), no phase-2 work on an
+ALIVE result.
 
 ---
 
 ## FREE PERIPHERY — implementer's choice
 
-Architecture details (encoder depth/width, FM parameterization, embedding of d as a
-variable), optimizer/schedule, curriculum, batching across targets, chain
-implementation details (blackjax), tokenization specifics (subject to the frozen
-centering rule), how zoo generation is parallelized, checkpoint cadence. Reuse
-`jax_flows` rather than rewriting FM; reuse stage-0 `stage0/` estimator code for all
-certificate math (it is gate-tested — do not reimplement SNIS/ESS).
+Chain bookkeeping details, checkpoint storage layout (scratch, per login rules), eval
+batching, the exact wall-clock accounting procedure for Readout B (document it), plot
+styles. Reuse the existing eval harness and stage-0 certificate code untouched.
 
-## Backpressure additions (on top of existing gates, which stay)
+## Deliverable
 
-New tests required before training: (a) each zoo family's exact sampler vs its
-log-density (KS/analytic-moment test); (b) warped-Gaussian log-det-Jacobian check;
-(c) FM head single-target overfit gate as an executable test (loss below threshold in
-fixed steps, deterministic seed); (d) certificate module reused from stage-0 passes
-its existing suite untouched. Training runs: deterministic seeding; every submitted
-job logged in `log/` with job ID, config hash, and expected outcome BEFORE submission.
-
-## Logging & deliverable
-
-Same log discipline. Deliverable: `RESULTS-toy.md` — P1/P2/P3/P11/P12/P7 verdicts with
-numbers, the zoo-diversity curve, the certificate confusion matrix (flagged vs actually
-bad, mode-drop column separate), baseline table, and honest limits. Written for the
-reconvene; assumes PLAN.md, not the code.
+`RESULTS-phase1b.md`: the five-checkpoint curves (both regimes, both readouts), the
+branch verdict with the rule applied verbatim, prediction verdicts, honest limits.
+Written for the reconvene; assumes this PLAN, not the code.
