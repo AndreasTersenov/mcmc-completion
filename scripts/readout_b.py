@@ -72,6 +72,7 @@ def main():
     args = ap.parse_args()
     t_start = time.time()
 
+    print(f"readout_b starting: devices={jax.devices()}", flush=True)
     base = os.path.join(os.path.dirname(__file__), "..", "results")
     bl = json.load(open(os.path.join(base, "baselines.json")))
     b4_by_key = {(r["family"], r["d"], r["idx"]): r["b4"] for r in bl["rows"]}
@@ -87,9 +88,11 @@ def main():
     # discarded warm-up pass on the first target: compile time, not inference
     r0 = rows_by_key[subset[0][:3]]
     ctx0 = Context(**{k: jnp.asarray(v) for k, v in r0["context_t5"]._asdict().items()})
+    print("eval set loaded; starting jit warm-up", flush=True)
     t0 = time.time()
     _ = ics_allin(model, params, r0["target"], ctx0, seed=1)
     compile_seconds = time.time() - t0
+    print(f"warm-up done in {compile_seconds:.1f}s", flush=True)
 
     out = {"tag": args.tag, "ckpt": args.ckpt, "compile_seconds": compile_seconds,
            "rows": []}

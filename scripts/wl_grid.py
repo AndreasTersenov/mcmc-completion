@@ -30,7 +30,12 @@ out_dir = os.path.join(os.environ["SCRATCH"], "ics-wl")
 os.makedirs(out_dir, exist_ok=True)
 
 sv = Survey()
-eng = ClEngine(sv, cache_dir=os.path.join(out_dir, "cls_cache"))
+# resolution DOUBLED after the first grid's surrogate plateaued at ~0.3 Knox
+# sigma independent of polynomial degree (CAMB/interpolation noise, not
+# truncation — post-mortem in log/2026-07-11-phase1b.md); cache keys include
+# nk/nz_pk so no stale collisions with the first grid.
+eng = ClEngine(sv, nz_int=1200, nz_pk=80, nk=800, n_ell=480,
+               cache_dir=os.path.join(out_dir, "cls_cache"))
 
 axes = [np.linspace(c - h, c + h, NPTS) for c, h in zip(CENTER, HW)]
 thetas = np.array([[om, s8, ns] for om in axes[0] for s8 in axes[1]

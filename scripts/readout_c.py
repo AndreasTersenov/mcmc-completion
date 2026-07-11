@@ -45,12 +45,21 @@ R = os.path.join(os.path.dirname(__file__), "..", "results")
 SMOKE = os.environ.get("ICS_SMOKE") == "1"
 REFS = (os.path.join(os.environ.get("TMPDIR", "/tmp"), "ics-refs-smoke") if SMOKE
         else os.path.join(os.environ.get("SCRATCH", "/tmp"), "ics-refs"))
-N_WARM, N_DRAWS = (200, 400) if SMOKE else (2000, 20_000)
+N_WARM = 200 if SMOKE else 2000
+# per-target draws AFTER the 2026-07-11 post-mortem: 4x20k under-converged the
+# banana (IACT O(100+) along the arch; variance swung -15%/+13% across draw
+# counts). Banana's SW2 reference is now its EXACT transform sampler; NUTS is
+# kept as a machinery cross-check at 1M draws with MC-error-calibrated gates.
+N_DRAWS = ({"gauss": 400, "eight_schools": 400, "gym_banana": 400,
+            "wl_bandpower": 400} if SMOKE else
+           {"gauss": 20_000, "eight_schools": 100_000, "gym_banana": 1_000_000,
+            "wl_bandpower": 50_000})
 N_EVAL, N_ODE = (64, 8) if SMOKE else (4096, 100)
 RHAT_GATE = 1.2 if SMOKE else 1.01  # smoke tests the PATH, not the statistics
+VAR_STAB_TOL = 0.5 if SMOKE else 0.03  # half-vs-full reference variance move
 
 
-def nuts_chains(key, logpdf_fn, d, init_scales, target_accept=0.85):
+def nuts_chains(key, logpdf_fn, d, init_scales, n_draws, target_accept=0.85):
     """4 NUTS chains via window adaptation; returns (draws (4,N,d), seconds)."""
     ld = lambda xi: logpdf_fn(xi[None, :])[0]
     t0 = time.time()
@@ -67,22 +76,26 @@ def nuts_chains(key, logpdf_fn, d, init_scales, target_accept=0.85):
             s, _ = alg.step(k, s)
             return s, s.position
 
-        _, pos = jax.lax.scan(step, state, jr.split(kd, N_DRAWS))
+        _, pos = jax.lax.scan(step, state, jr.split(kd, n_draws))
         chains.append(np.asarray(pos))
     return np.stack(chains), time.time() - t0
 
 
 def build_reference(name, key, logpdf_fn, d, init_scales, **kw):
-    draws, secs = nuts_chains(key, logpdf_fn, d, init_scales, **kw)
+    draws, secs = nuts_chains(key, logpdf_fn, d, init_scales, N_DRAWS[name], **kw)
     rhat = split_rhat(draws)
-    print(f"{name}: {draws.shape} in {secs:.0f}s, max R-hat = {rhat.max():.4f}",
-          flush=True)
-    if rhat.max() >= RHAT_GATE:
-        print(f"RHAT-GATE-FAIL on {name}: {rhat}")
+    # repo-standard N-doubling stability: pooled variance, first half vs full
+    pooled = draws.reshape(-1, d)
+    half = draws[:, : draws.shape[1] // 2].reshape(-1, d)
+    var_move = np.abs(half.var(0) / pooled.var(0) - 1.0)
+    print(f"{name}: {draws.shape} in {secs:.0f}s, max R-hat = {rhat.max():.4f}, "
+          f"max var half-vs-full move = {var_move.max():.4f}", flush=True)
+    if rhat.max() >= RHAT_GATE or var_move.max() >= VAR_STAB_TOL:
+        print(f"REF-GATE-FAIL on {name}: rhat={rhat}, var_move={var_move}")
         sys.exit(1)
     os.makedirs(REFS, exist_ok=True)
     np.savez(os.path.join(REFS, f"{name}.npz"), draws=draws.astype(np.float32),
-             rhat=rhat, seconds=secs)
+             rhat=rhat, seconds=secs, var_move=var_move)
     return draws
 
 
@@ -97,7 +110,8 @@ def build_refs():
         r = x - mj
         return -0.5 * jnp.einsum("ni,ij,nj->n", r, Ainv, r)
 
-    draws, _ = nuts_chains(jr.key(101), gauss_lp, 3, [1.0, 1.4, 0.7])
+    draws, _ = nuts_chains(jr.key(101), gauss_lp, 3, [1.0, 1.4, 0.7],
+                           N_DRAWS["gauss"])
     pooled = draws.reshape(-1, 3)
     rhat = split_rhat(draws)
     sd = np.sqrt(np.diag(A))
@@ -114,16 +128,26 @@ def build_refs():
     build_reference("eight_schools", jr.key(102), eight_schools_logpdf, 10,
                     [1.0] * 10, target_accept=0.9)
 
-    # ---- (b) gym banana + exact cross-check
-    draws = build_reference("gym_banana", jr.key(103), gym_banana_logpdf, 2,
-                            [10.0, 1.0])
-    exact = np.asarray(gym_banana_sample(jr.key(104), 100_000))
+    # ---- (b) gym banana: EXACT transform sampler is THE reference (superior
+    # to any chain; post-mortem 2026-07-11 in log/2026-07-11-phase1b.md).
+    # NUTS is retained as a machinery cross-check at 1M draws/chain; the var
+    # gate 0.10 is ~2 sigma of the MC error at the measured IACT.
+    exact = np.asarray(gym_banana_sample(jr.key(104), 400_000))
+    os.makedirs(REFS, exist_ok=True)
+    np.savez(os.path.join(REFS, "gym_banana.npz"),
+             draws=exact.reshape(4, -1, 2).astype(np.float32),
+             rhat=np.ones(2), seconds=0.0, var_move=np.zeros(2), exact=True)
+    draws, secs = nuts_chains(jr.key(103), gym_banana_logpdf, 2, [10.0, 1.0],
+                              N_DRAWS["gym_banana"])
     pooled = draws.reshape(-1, 2)
     m_err = np.abs(pooled.mean(0) - exact.mean(0)) / exact.std(0)
     v_err = np.abs(pooled.var(0) / exact.var(0) - 1.0)
-    print(f"banana exact cross-check: mean_err/sd {m_err.round(4)}, "
-          f"var rel err {v_err.round(4)}", flush=True)
-    if not SMOKE and not (m_err.max() < 0.03 and v_err.max() < 0.05):
+    rhat = split_rhat(draws)
+    print(f"banana NUTS machinery cross-check ({secs:.0f}s): mean_err/sd "
+          f"{m_err.round(4)}, var rel err {v_err.round(4)}, "
+          f"max R-hat {rhat.max():.4f}", flush=True)
+    if not SMOKE and not (m_err.max() < 0.03 and v_err.max() < 0.10
+                          and rhat.max() < RHAT_GATE):
         print("BANANA-CROSSCHECK-FAIL")
         sys.exit(1)
 

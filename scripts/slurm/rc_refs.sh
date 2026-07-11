@@ -6,6 +6,7 @@
 #SBATCH -o jobout/rcrefs_%j.out
 # CPU job: fit+validate the WL surrogate, then build all NUTS references
 # (closed-form Gaussian validation gate runs first inside readout_c.py).
+set -e  # a surrogate gate failure must kill the job, not fall through
 module load python/3.11.5 gcc
 source "$HOME/ics-env/bin/activate"
 cd "$HOME/software/mcmc-completion"
