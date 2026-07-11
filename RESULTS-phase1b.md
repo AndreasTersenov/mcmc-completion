@@ -7,7 +7,10 @@ pre-authorized gate amendment, all logged before the affected numbers
 existed). Instruments and seeds are the toy phase's verbatim; the capacity
 arm shares the identical reference set (zero reference noise across lines).
 T=1 is the scoring column throughout (Ruling 1 columns both reported in the
-jsons).
+jsons). The 2M harvest was independently audited mid-phase
+(log/2026-07-11-reconvene-phase1b.md): numbers re-extracted and matched
+verbatim, STRUCTURAL endorsed, capacity-arm firing ruled legitimate; its
+Ruling-2 framing caveat is incorporated below.
 
 ## The branch verdict (frozen rule applied verbatim)
 
@@ -57,18 +60,28 @@ figure: results/real_by_eye.png; raw: readout_c_{200k,2M}.json):
 - **Pre-registered barometer clause (60%): CONFIRMED, exceeded** — two of
   three real targets clear certified-ESS ≥ 1% stable at 2M; eight-schools
   clears it already at 200k, at d=10.
-- The samples say more than the numbers (real_by_eye.png): the 2M banana
-  covers the arch's bulk without tracing its geometry (ESS 33% while SW2
-  stays 15.6 — the certificate prices mass overlap, SW2 prices shape; both
-  honest). The 2M WL cloud visibly reorganizes along the Ω_m–σ₈ degeneracy
-  ridge — the model reads the ridge direction out of the stalled chains —
-  but stays ~100× too wide, with a tanh-adapter corner artifact; the
-  certificate refuses it, correctly, at both checkpoints.
-- Interpretation (hypothesis, not measurement): long training improves the
-  conditional field's robustness/transfer while per-target sharpness against
-  the frozen composite is limited by the objective/architecture class, not
-  by steps or width. This reframes phase 2: the lever that helps is the one
-  the zoo instruments cannot see.
+- **The raw-evidence caveat (reconvene Ruling 2, binding for any write-up):**
+  the raw zero-shot clouds do NOT visually trace the targets — the 2M banana
+  covers the arch's bulk but misses the arms, eight-schools sits slightly
+  low in log τ, and SW2 actually WORSENS 200k→2M on both passing targets
+  (banana 10.5→15.6, eight-schools 0.09→0.28) while certified ESS rises.
+  What compute improved is the model as a **CERTIFIED IMPORTANCE PROPOSAL**
+  (coverage + exact reweighting), not as a direct posterior sampler — the
+  proposal-engine framing is the only one Readout C supports. Quote
+  certified-ESS after reweighting; never present raw clouds as posterior
+  approximations (real_by_eye.png panels are labeled accordingly).
+- The WL fail is diagnostic, not partial success: an extremely concentrated
+  data-dominated d=3 posterior gives a zero-shot proposal ~no overlap, and
+  the certificate correctly refuses it at both checkpoints — "the
+  certificate knows when it doesn't work" is a selling point of the
+  reframe. (The 2M cloud does visibly reorganize along the Ω_m–σ₈
+  degeneracy ridge, ~100× too wide, with a tanh-adapter corner artifact.)
+- Interpretation (hypothesis, reconvene-endorsed as such): long training
+  improves the conditional field's robustness/transfer while per-target
+  sharpness against the frozen composite is limited by the
+  objective/architecture class, not by steps or width — the capacity arm
+  has now separated the capacity half (width hurt; objective/eval
+  limitation stands).
 
 ## Readout B — the proposal-engine cost-crossover
 
@@ -90,21 +103,34 @@ tails). P-crossover (65%: → ≥5/12): **MISS**.
 | P-crossover: 3/12 → ≥5/12 | 65% | **MISS** (2/12) |
 | Readout-C: ≥1 real target ≥1% stable at 2M | 60% | **CONFIRMED** (2/3; at 200k already) |
 | capacity arm: STRUCTURAL-confirm | 55% | CONFIRMED |
+| reconvene (pre-eval_cap): STRUCTURAL-confirm | 60% | CONFIRMED |
 
 Two frozen-core expectations missed in the pessimistic direction; the
-usefulness bet hit. The registered record stands as written.
+usefulness bet hit. The reconvene's own audit priced its three misses (modal
+ALIVE call, P-curve, P-crossover) in log/2026-07-11-reconvene-phase1b.md.
+The registered record stands as written.
 
 ## Pivot options (pre-listed in PLAN; evidence attached, decision = reconvene)
+
+Reconvene Ruling 3 preparation (recorded pre-eval_cap, binding as framing):
+the pivot is argued from THESE numbers, not the toy-phase warp result;
+Readout B (2/12 at both checkpoints) does NOT support a cost-competitive-
+niche claim today; Readout C supports a SCOPED proposal-engine pivot —
+d ≤ 10, diffuse-to-moderate posteriors, certificate-gated — with
+eight-schools/banana as the dogfooding argument.
 
 1. **Per-domain scoping** — the barometer says transfer to real targets is
    where compute pays; a zoo REBUILT around one real problem family
    (amendment's usefulness clauses; first candidate user: Andreas's
    thesis/CosmOrford chains) tests whether in-domain prior-fitting closes
    the sharpness gap where it matters. Readout-C evidence: eight-schools
-   d=10 works today; WL fails today but visibly finds the ridge.
-2. **Proposal-engine product at current quality, d ≤ 4** — 10× cheaper per
-   target with an honest certificate, but crossover 2/12 says the niche is
-   narrow (targets where classical samplers mode-drop).
+   d=10 works today as a certified proposal; WL fails today but visibly
+   finds the ridge.
+2. **Proposal-engine product at current quality** — scoped per Ruling 3
+   (d ≤ 10, diffuse-to-moderate, certificate-gated): 10× cheaper per target
+   with an honest certificate, but crossover 2/12 says the classical-
+   sampler-replacement niche is narrow today (targets where MCLMC itself
+   mode-drops).
 3. **Fold the certificate machinery into the D2-style inference engine** —
    the certificate results (coverage law, blind spot, honest refusals on
    WL/banana here) are the phase's most portable asset.
