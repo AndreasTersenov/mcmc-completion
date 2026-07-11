@@ -1,123 +1,60 @@
-# JOBS.md — SLURM state + handoff (phase 1, toy)
+# JOBS.md — SLURM state + handoff (phase 1b)
 
-Updated 2026-07-10 (PHASE 1 HARVEST COMPLETE). **No jobs in flight.**
-RESULTS-toy.md is FINAL (all P-verdicts, baselines 1-4, K-T1 does not
-fire). Awaiting reconvene on: (a) the staged follow-ups (2M/longer arms,
-T-corrected whitening arm, banana-warp numeric fix, certificate
-dispersion-check against the P3 blind spot); (b) phase-2 scoping.
-The 12 gate-(iv) chain jobs + 4 baseline jobs are all COMPLETED/harvested;
-full ledger in log/2026-07-10-toy-gate4.md. Budget ~32/480 H100-hours.
+Updated 2026-07-11 ~14:30. Phase 1b (PLAN.md frozen core + amendment) is
+EXECUTING. Pre-registrations, config hashes, post-mortems:
+log/2026-07-11-phase1b.md. Everything below fires automatically; harvest
+begins when the chain + dependent evals complete.
 
-## On baselines harvest
-1. P1 SW2 clause: eval_train4 subset rows' sw2 vs 2x B2 sw2 -> final P1.
-2. P3 anchor sensitivity: bad = sw2 > 10x B2-sw2 on subset; report shift.
-3. P7: B4-vs-ICS SW2 at matched wall-clock + amortized-cost statement.
-4. Baseline table -> RESULTS-toy.md; remove DRAFT banner; commit; K-T1
-   statement stands (does not fire).
+## In flight / queued
 
-## Harvest (in order; keep regimes SEPARATED in every report)
-1. Check sanity floors first: a SANITY-FLOOR-FAIL invalidates that arm
-   (diagnose + resubmit, do not reinterpret).
-2. Paired instruments -> P-scale verdict (70% expectation logged).
-3. P-assembly from eval jsons (fresh-theta): P1 (train4, heldout=False,
-   d<=8: ESS>=1% clause now; SW2 clause NEEDS baselines below); P2/P3
-   (heldout=True, mode_recovery column separates mode-drop); P11 (train4 vs
-   train4ng); P12 (train2 vs train4 heldout rows).
-4. Baselines 1-4 for the SW2 clauses: (1) untrained params via eval_full
-   --ckpt on an init checkpoint; (2) per-target FM 10 H100-min x ~12
-   representative eval targets; (3) energy-MLP-on-context + MALA; (4)
-   blackjax MCLMC at matched wall-clock (SW2/mode-recovery only).
-5. RESULTS-toy.md per PLAN: P-verdicts, zoo-diversity curve (P12),
-   certificate confusion matrix (mode-drop column separate), baseline
-   table, honest limits; carry-items: coverage law (paper figure,
-   results/gate3_story.png), funnel conditional-specific gap, three
-   information-ceiling reclassifications, PAIRED-B scaling direction.
-2M chain stays staged/superseded unless arms show undertraining (loss still
-falling at 1.6M or paired instrument regressing). Budget ~14/480 spent;
-chain adds ~15-20 H100-hours.
+- **15738731 t2m link 2** RUNNING (resumed at 1.0M steps, ~113 steps/s,
+  budget 9000 s — may end ~50k short of 2M; link 3 finishes it).
+- **15738732 t2m link 3** (afterany link 2; no-ops if complete flag set).
+- **15738734 evalcurve** (afterany link 3; REFUSES to run a partial curve —
+  resubmit after chain completion if it exits 1).
+- **15741585 rb2m** (afterany link 3; in-script guard on the 2M snapshot).
+- **15741589 rce2m** (afterok rcrefs 15741587 [DONE] + afterany link 3; guard).
 
-## Gap inventory after the P1-mirror measurement (results/gate3_p1.json)
-- warp-d2 PASSES (first certified target); ESS clause solved on 6/10 rows.
-- (1) CONDITIONAL SHARPNESS is the dominant gap: SW2 30-400x bespoke refs.
-- (2) d=2 mode drop: localized bug, survives all ablations.
-- (3) funnels fail conditionally even at K=512 (bespoke passes with the same
-  whitening) — conditional-model-specific. K=128 refusal behavior correct.
-## Next levers IN ORDER (pre-register each in a new gate3d log):
-(1) d=2 fix — d-embedding one-hot, then per-family balance (eval-only reuse
-    of checkpoints where possible); (2) training length on the no-shortk
-    recipe (b1 loss plateau ~1.38 may be real convergence — check with 400k);
-    (3) head capacity for sharpness. On eventual GATE3-PASS: patch
-    eval_full.py with funnel-K=512 handling, then the gate-(iv) chain.
+## Landed today (all committed; jsons in results/)
 
-## Environment (everything assumes this)
-- venv `~/ics-env` (jax 0.9.1 + cuda12 plugin; distrax/diffrax dropped — see
-  log/2026-07-09-toy-env.md). Jobs: `module load python/3.11.5 gcc cuda/12.6`.
-- Login node: ALWAYS `JAX_PLATFORMS=cpu taskset -c 0-7` for python (cgroup
-  pids.max=512; XLA thread pools). Never seed with builtin hash() (salted).
-- `~/software/jax_flows` on local branch `rorqual-compat` (do not push).
-- Full test suite: 105 green. Stop hook runs it via ics-env.
+- Training milestones: ckpt_2m_step{250000,500000,1000000}.pkl on scratch;
+  1.5M + 2M pending. Loss ~1.37 @1M (gate3e-200k level was ~1.30 on this zoo
+  — noisy per-step, the eval curve is the real readout).
+- readout_b_200k.json: **crossover 2/12** (128-zoo line; frozen train4
+  baseline 3/12). Per-row all-in 1.6–2.7 s vs MCLMC 19–30 s.
+- readout_c_200k.json: **eight-schools T1 zero-shot: ESS 8.4% STABLE, SW2
+  0.091 vs NUTS ref** (pre-registered 60% barometer clause already met at
+  200k); gym-banana partial (T5 1.3% stable); WL band-power fails at 200k
+  (needle posterior; theta means off).
+- References on scratch ics-refs/: eight_schools (4x100k, R-hat 1.0000),
+  gym_banana (EXACT sampler + 4x1M NUTS cross-check 0.3%/1.3%),
+  wl_bandpower (4x50k, R-hat 1.0001). wl_surrogate.npz: degree 5, held-out
+  max 0.211 sigma / median 0.011 sigma, gate AMENDED (documented).
+- results/scaling_by_eye.png (3 targets x 3 generations, honest captions).
 
-## Gate (iii) attempt-3 plan (APPROVED at reconvene 2026-07-10 with four
-## additions — see log/2026-07-10-reconvene-gate3.md; err-wide x3 arms +
-## hybrid learned scale correction added below)
-Two independent fixes, test cheapest-first, ONE variable at a time:
-1. **Whitening scale (funnel killer).** Proven: FM head hits the sampling
-   floor on funnels when whitened with true pool moments (login diagnostic in
-   the gate-3 log, 4k steps). Candidate fixes, in order:
-   a. inflate context sigma by a per-dim factor inferred from energy DROP
-      across the chain (the context knows how far downhill it went);
-   b. heavier-tailed FM base (student-t, df~5) — cheap, composable;
-   c. quick empirical study: does sigma_ctx accuracy improve with K=512 or
-      larger INIT_SCALE? (frozen protocol allows K choice at train time.)
-2. **Mode-subset completion (gmm/dwell d=2 killer).** The encoder completes
-   only context-visited modes; a Bayes-optimal reader would recover the full
-   in-family mode structure from 128 exact (x,E,gradE) tokens (stage-0 M2).
-   Candidate fixes: (a) self-attention token mixer before pooling (2 blocks);
-   (b) train-time context augmentation — pair each target with SHORT contexts
-   (K=8/32) so "context under-covers, pool has more" is a learned pattern;
-   (c) check gmm-d8+warp-d8 stability flags too (borderline rows).
-Gate-iii criteria stand as amended (ESS>=5%, stable, |logZ|<=0.1,
-SW2^2 <= max(3x floor, 0.1), >=8/10). Re-pre-register anything else BEFORE
-the run, in log/2026-07-10-toy-gate3b.md.
+## Harvest (when the chain + evals land) — task for the session
 
-## Gate (iv) submission recipe (ONLY after gate (iii) green + committed)
-```bash
-cd ~/software/mcmc-completion && mkdir -p jobout
-GEN=$(sbatch --parsable scripts/slurm/gen_data.sh)
-A1=$(sbatch --parsable -J train4 --dependency=afterok:$GEN scripts/slurm/train_arm.sh train4)
-A2=$(sbatch --parsable -J train4 --dependency=afterany:$A1 scripts/slurm/train_arm.sh train4)
-B1=$(sbatch --parsable -J train2 --dependency=afterok:$GEN scripts/slurm/train_arm.sh train2)
-B2=$(sbatch --parsable -J train2 --dependency=afterany:$B1 scripts/slurm/train_arm.sh train2)
-C1=$(sbatch --parsable -J train4ng --dependency=afterok:$GEN scripts/slurm/train_arm.sh train4 --nograd)
-C2=$(sbatch --parsable -J train4ng --dependency=afterany:$C1 scripts/slurm/train_arm.sh train4 --nograd)
-sbatch -J eval_train4   --dependency=afterany:$A2 scripts/slurm/eval_arm.sh train4
-sbatch -J eval_train2   --dependency=afterany:$B2 scripts/slurm/eval_arm.sh train2
-sbatch -J eval_train4ng --dependency=afterany:$C2 scripts/slurm/eval_arm.sh train4ng --nograd
-```
-Log every job ID + config hash + expected outcome in
-log/2026-07-10-toy-gate4.md BEFORE submitting. If the encoder changes in
-attempt 3, ICSModel defaults change → datagen is unaffected, but re-hash.
+1. eval_curve.json → Readout A: TT/fresh curves, both columns, T=1 primary.
+2. Apply the frozen branch rule VERBATIM (PLAN.md): TT@2M vs 50%; FQ = fresh
+   med ratio(0.2M)/(2M) vs 4x; FE = any d=4 family fresh median ESS ≥ 5% T1;
+   plateau = <10% relative TT improvement over the final 500k.
+3. readout_b_2M.json → crossover count (rule: ≥6/12 modifies pivot options).
+4. readout_c_2M.json → barometer table (NON-GATING), both columns.
+5. RESULTS-phase1b.md per PLAN deliverable spec; prediction scorecard
+   (branch dist 45/25/30, P-curve 70%, P-crossover 65%, Readout-C 60%).
+6. REPORT AND STOP — phase-2/pivot scoping belongs to the reconvene.
 
-## After eval jsons land — P-verdict assembly
-- P1: eval_train4, heldout=False, d<=8: fraction d2_hat <= 4.6 (ESS >= 1%)
-  >= 80%; SW2 within 2x baseline-2. NOTE: gate-3 attempt 2 shows 7/10
-  training targets clearing the ESS CLAUSE only — P1 is a composite (ESS AND
-  SW2 vs baseline-2), and ESS alone cannot adjudicate multimodal targets
-  (mode drop evades it). Reconvene 2026-07-10: mode-recovery column is
-  mandatory in every gate report.
-- P2/P3: heldout=True rows; P3 confusion matrix separates mode-drop via the
-  mode_recovery column (gate-3 showed the blind spot behaves exactly as
-  stage-0 predicted: dropped modes read ESS 19% STABLE with logZ = ln(mass)).
-- P11: eval_train4 vs eval_train4ng. P12: eval_train2 vs eval_train4 heldout.
-- P7 + baselines 1-4: NOT BUILT. baseline-1 = eval with untrained params;
-  baseline-2 = per-target FM, 10 H100-min x ~12 targets; baseline-3 = energy
-  MLP fit on context (x,E) + MALA; baseline-4 = blackjax MCLMC at matched
-  wall-clock (SW2/mode-recovery only, no q-density). Then RESULTS-toy.md.
+## Environment (unchanged)
 
-## Kill criteria status
-K-T1: not close (P1's bar within reach in-family; < 1 H100-hour of the
-20-day cap spent). K-T2: undetermined until the P12 arms run.
+- venv ~/ics-env; jobs: module load python/3.11.5 gcc cuda/12.6. Login:
+  JAX_PLATFORMS=cpu taskset -c 0-7. crc32 seeds. grep-verify edits.
+- eft-sbi read-only; its .venv has camb; WL caches on $SCRATCH/ics-wl.
+- Post-maintenance nodes can silently wedge GPU jobs (three timeouts today:
+  rg31703 x2 co-scheduled, rg31604): if a GPU job prints nothing past the
+  ptxas banner for minutes, suspect the node before the code — but verify
+  with an instrumented rerun before blaming either.
 
-## Budget ledger
-smoke 15582495 + gate1 15583499 (33 s) + gate2 15583637 + gate3 15583912 +
-gate3-attempt2 15586126 (~13 min MIG) ≈ **< 1 H100-hour total spent**.
+## Budget
+
+Phase-1b cap 40 H100-h. Spent so far: chain ~5 h (links 1–2) + evals/figures
+~2 h + 3 wasted timeouts ~1.75 h ≈ 9 h. Well inside cap.
