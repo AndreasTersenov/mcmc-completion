@@ -121,15 +121,34 @@ def fresh_units():
 
 
 def main():
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--ckpts", default=None,
+                    help="comma list tag=path; default = the frozen 2M-line six")
+    ap.add_argument("--wide", action="store_true",
+                    help="2x width model (the conditional capacity arm)")
+    ap.add_argument("--out", default="eval_curve.json")
+    ap.add_argument("--refs-from", default=None,
+                    help="reuse the refs dict from this results json (removes "
+                         "reference-training noise from cross-line comparisons)")
+    args = ap.parse_args()
+    global CKPTS
+    if args.ckpts:
+        CKPTS = [tuple(p.split("=", 1)) for p in args.ckpts.split(",")]
+
     t0 = time.time()
     out_path = (os.path.join(os.environ.get("TMPDIR", "/tmp"), "eval_curve_smoke.json")
-                if SMOKE else os.path.join(R, "eval_curve.json"))
+                if SMOKE else os.path.join(R, args.out))
     out = (json.load(open(out_path)) if os.path.exists(out_path) and not SMOKE
            else {"refs": {}, "blocks": {}, "skipped_ckpts": []})
+    if args.refs_from:
+        out["refs"] = json.load(open(os.path.join(R, args.refs_from)))["refs"]
+        print(f"refs preloaded from {args.refs_from} ({len(out['refs'])})", flush=True)
 
     tt = tt_units()[:1 if SMOKE else None]
     fr = fresh_units()[:1 if SMOKE else None]
-    model = ICSModel(n_attn=2)
+    model = (ICSModel(enc_dim=256, enc_hidden=512, head_hidden=(512, 512, 512),
+                      n_attn=2) if args.wide else ICSModel(n_attn=2))
 
     # contexts (regenerated deterministically each run — cheap) + refs (stored)
     tt_ctx, fr_ctx = {}, {}
