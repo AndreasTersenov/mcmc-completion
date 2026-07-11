@@ -1,7 +1,10 @@
-"""PAIRED-A branch: 2M-step training on the exact gate3e 128-target dataset
+"""Phase 1b: 2M-step training on the exact gate3e 128-target dataset
 (deterministic rebuild in-job: jr.key(3131), T-mix [1,1,2,2,5,5], aux).
+ONE variable vs gate3e: steps 200k -> 2M (cosine stretched). Milestone
+snapshots at 0.25/0.5/1/1.5/2M per the frozen five-checkpoint curve.
 Resumable (time budget + checkpoint + status json) for the 3h-b1 chain.
-Pre-registration: log/2026-07-10-paired-eval.md (branch A)."""
+Pre-registration: log/2026-07-11-phase1b.md.
+ICS_SMOKE=1 shrinks everything for a CPU end-to-end path test ONLY."""
 
 import argparse, json, os, sys, time
 
@@ -21,6 +24,13 @@ PER_CELL = {c: (11 if i < 8 else 10) for i, c in enumerate(
     [(f, d) for f in FAMS for d in DS])}
 T_MIX = [1.0, 1.0, 2.0, 2.0, 5.0, 5.0]
 STEPS_TOTAL, BATCH, LR = 2_000_000, 512, 1e-3
+N_CTX, K, N_POOL = 6, 128, 50_000
+MILESTONES = (250_000, 500_000, 1_000_000, 1_500_000, 2_000_000)
+
+if os.environ.get("ICS_SMOKE") == "1":  # CPU path test only — never production
+    PER_CELL = {("gmm", 2): 2, ("dwell", 2): 2}
+    STEPS_TOTAL, BATCH, N_POOL = 300, 32, 2_000
+    MILESTONES = (100, 200, 300)
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--ckpt", required=True)
@@ -30,7 +40,7 @@ args = ap.parse_args()
 
 t0 = time.time()
 specs = [(f, d, i) for (f, d), n in PER_CELL.items() for i in range(n)]
-targets, ctxs, data = build_zoo_dataset(jr.key(3131), specs, 6, 128, 50_000,
+targets, ctxs, data = build_zoo_dataset(jr.key(3131), specs, N_CTX, K, N_POOL,
                                         temperature=T_MIX, aux_tokens=True)
 print(f"dataset rebuilt in {time.time()-t0:.0f}s", flush=True)
 
@@ -48,11 +58,15 @@ if os.path.exists(args.ckpt):
     start = ck["step"]
     print(f"resumed from step {start}", flush=True)
 
-step = make_train_step(model, tx, BATCH, len(specs), 6, 50_000)
+step = make_train_step(model, tx, BATCH, len(specs), N_CTX, N_POOL)
 i = start
 while i < STEPS_TOTAL:
     params, opt_state, loss = step(params, opt_state, jr.fold_in(jr.key(33), i), data)
     i += 1
+    if i in MILESTONES:
+        snap = args.ckpt.replace(".pkl", f"_step{i}.pkl")
+        save_checkpoint(snap, params, opt_state, i)
+        print(f"milestone snapshot saved: {snap}", flush=True)
     if i % 50_000 == 0:
         print(f"step {i}: loss {float(loss):.4f} [{time.time()-t0:.0f}s]", flush=True)
     if i % 10_000 == 0 and time.time() - t0 > args.time_budget_sec:
