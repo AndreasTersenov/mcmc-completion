@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --account=rrg-lplevass
-#SBATCH --gpus-per-node=h100_20gb
-#SBATCH --time=00:30:00
+#SBATCH --gpus-per-node=1
+#SBATCH --time=00:45:00
 #SBATCH --mem=24G
 #SBATCH --cpus-per-task=4
 #SBATCH -o jobout/scalingeye_%j.out
