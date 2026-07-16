@@ -39,3 +39,11 @@ WL needle refused honestly) — is the finding the reconvene should weigh.
   half-vs-full variance stability gate (both now standard in readout_c).
 - eft-sbi read-only; its .venv has camb; WL grid/caches on $SCRATCH/ics-wl;
   wl_surrogate gate runs AMENDED (0.5σ sanity bound; see log post-mortem #5).
+
+## PROJECT PARKED — 2026-07-11
+
+No jobs are running or authorized. Final chain: 15754023-27 (capacity arm,
+harvested at reconvene → STRUCTURAL again → park decision). Scratch checkpoints
+under $SCRATCH/ics-zoo/ may be reclaimed after 2026-08-01 EXCEPT gate3e-200k,
+ckpt_2m_step2000000, and ckpt_cap_step1000000 (archive-grade: the three verdict
+checkpoints). See log/2026-07-11-reconvene-park.md.

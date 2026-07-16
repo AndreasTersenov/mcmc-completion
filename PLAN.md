@@ -1,5 +1,13 @@
 # PLAN — Phase 1b: the decisive compute experiment (+ proposal-engine readout)
 
+> **PROJECT STATUS: PARKED (2026-07-11, Andreas's decision at reconvene).**
+> Phase 1b landed STRUCTURAL; the capacity arm landed STRUCTURAL again; the pivot
+> conversation concluded: park the method, migrate the certificate machinery
+> (already live in eft-sbi), optional methods note pending the novelty check
+> (SPEC-novelty-identity.md). Decision record, salvage inventory, and pre-named
+> revival conditions: log/2026-07-11-reconvene-park.md. No training runs are
+> authorized. This plan is retained as the record of the decisive experiment.
+
 **Status of the project entering this phase** (context for a compacted/fresh session —
 re-anchor from disk, not memory: RESULTS-toy.md, log/2026-07-10-*.md, JOBS.md):
 the toy phase closed with the scaling direction confirmed (P-scale: paired medians
